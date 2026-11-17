@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useRoom, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
+  html, render, useState, useEffect, useRef, useRoom, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
@@ -315,6 +315,7 @@ function App() {
     addEventListener('dblclick', go);
     return () => removeEventListener('dblclick', go);
   }, []);
+  if (status === 'auth') return html`<${Aurora} /><${LoginScreen} title="Beamer-Ansicht" />`;
   if (status === 'error') return html`<${Aurora} /><div class="b-error glass"><${Logo} size=${40} /><p>${error}</p></div>`;
   if (!v) return html`<${Aurora} /><div class="b-error"><${Logo} size=${60} /></div>`;
   return html`<${Aurora} />${status === 'offline' && html`<div class="offline-banner">Verbindung unterbrochen …</div>`}<${BeamerStage} v=${v} />`;

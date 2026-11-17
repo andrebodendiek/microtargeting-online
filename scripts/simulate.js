@@ -1,10 +1,9 @@
 // Simuliert eine Klasse (Bots), z. B. zum Testen oder für eine Vorführung.
-// Aufruf: node scripts/simulate.js <URL> <RAUMCODE> [Anzahl=16] [--teacher=KEY --phase=PHASE]
+// Aufruf: node scripts/simulate.js <URL> <RAUMCODE> [Anzahl=16]
 import { io } from 'socket.io-client';
 import { CATEGORIES, ROUND1, ADS, AVATARS, POST } from '../public/shared/content.js';
 
 const [url = 'http://localhost:3000', code, nArg = '16'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const opt = Object.fromEntries(process.argv.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 if (!code) { console.log('Aufruf: node scripts/simulate.js <URL> <RAUMCODE> [Anzahl]'); process.exit(1); }
 const N = Number(nArg);
 const cats = CATEGORIES.map((c) => c.id);
@@ -84,10 +83,4 @@ for (const b of bots) b.s.on('state', async (st) => {
     }
   }
 });
-if (opt.teacher) {
-  const t = io(url, { transports: ['websocket'] });
-  t.on('connect', () => t.emit('hello', { code, role: 'teacher', key: opt.teacher }, () => {
-    if (opt.phase) t.emit('act', { type: 'setPhase', data: { phase: opt.phase } });
-  }));
-}
 process.on('SIGINT', () => process.exit(0));

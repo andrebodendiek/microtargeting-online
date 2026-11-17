@@ -6,12 +6,15 @@ import { Server } from 'socket.io';
 import QRCode from 'qrcode';
 import { Store } from './src/store.js';
 import * as G from './src/game.js';
+import { createAuth } from './src/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const store = new Store(DATA_DIR);
+const auth = createAuth({ password: process.env.TEACHER_PASSWORD, secret: process.env.SESSION_SECRET });
+if (!auth.configured) console.warn('⚠️  TEACHER_PASSWORD ist nicht gesetzt – der Lehrkraft-Bereich ist gesperrt, bis ein Passwort konfiguriert ist.');
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
@@ -22,11 +25,40 @@ app.use('/vendor/preact', express.static(nm('preact'), { maxAge: '7d' }));
 app.use('/vendor/htm', express.static(nm('htm'), { maxAge: '7d' }));
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], maxAge: '5m' }));
 
-app.get('/healthz', (_req, res) => res.json({ ok: true, rooms: store.rooms.size }));
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+
+// ------------------------------------------------------------ Lehrkraft-Anmeldung
+const requireTeacher = (req, res, next) => {
+  if (auth.isTeacher(req.headers.cookie)) return next();
+  res.status(401).json({ error: auth.configured ? 'Bitte als Lehrkraft anmelden.' : 'Lehrkraft-Zugang ist auf dem Server nicht eingerichtet (TEACHER_PASSWORD fehlt).' });
+};
+const loginLimiter = new Map();
+app.get('/api/me', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ teacher: auth.isTeacher(req.headers.cookie), configured: auth.configured });
+});
+app.post('/api/login', (req, res) => {
+  const ip = req.ip || 'x';
+  const now = Date.now();
+  const hits = (loginLimiter.get(ip) || []).filter((t) => now - t < 5 * 60_000);
+  if (hits.length >= 8) return res.status(429).json({ error: 'Zu viele Versuche. Bitte in ein paar Minuten erneut probieren.' });
+  if (!auth.configured) return res.status(503).json({ error: 'Lehrkraft-Zugang ist auf dem Server nicht eingerichtet (TEACHER_PASSWORD fehlt).' });
+  if (!auth.checkPassword(req.body?.password)) {
+    hits.push(now); loginLimiter.set(ip, hits);
+    return res.status(401).json({ error: 'Falsches Passwort.' });
+  }
+  loginLimiter.delete(ip);
+  res.setHeader('Set-Cookie', auth.cookieFor(req.secure));
+  res.json({ ok: true });
+});
+app.post('/api/logout', (req, res) => {
+  res.setHeader('Set-Cookie', auth.clearCookie(req.secure));
+  res.json({ ok: true });
+});
 
 // Neuen Raum anlegen (Lehrkraft)
 const createLimiter = new Map();
-app.post('/api/rooms', (req, res) => {
+app.post('/api/rooms', requireTeacher, (req, res) => {
   const ip = req.ip || 'x';
   const now = Date.now();
   const hits = (createLimiter.get(ip) || []).filter((t) => now - t < 60_000);
@@ -43,7 +75,7 @@ app.get('/api/rooms/:code', (req, res) => {
   res.json({ code: room.code, phase: room.phase });
 });
 
-app.get('/api/rooms/:code/export.csv', (req, res) => {
+app.get('/api/rooms/:code/export.csv', requireTeacher, (req, res) => {
   const room = store.get(req.params.code);
   if (!room || req.query.key !== room.key) return res.status(403).send('Kein Zugriff');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -113,6 +145,7 @@ io.on('connection', (sock) => {
     if (!room) return reply({ error: 'Raum nicht gefunden. Code prüfen!' });
     const role = msg.role;
     if (role === 'teacher' || role === 'beamer') {
+      if (!auth.isTeacher(sock.handshake.headers.cookie)) return reply({ error: 'Bitte als Lehrkraft anmelden.', auth: true });
       if (msg.key !== room.key) return reply({ error: 'Falscher Lehrkraft-Schlüssel.' });
       sock.data = { code: room.code, role };
     } else {

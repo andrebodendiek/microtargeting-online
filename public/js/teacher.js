@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useRoom, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, Stepper, Progress,
+  html, render, useState, useEffect, useRef, useRoom, LoginScreen, teacherLogout, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, Stepper, Progress,
   CATEGORIES, CAT, PHASE,
 } from './lib.js';
 
@@ -106,6 +106,7 @@ function App() {
   }, [!!v]);
 
   if (!code || !key) return html`<${Aurora} /><main class="t-error card pad">Link unvollständig. Bitte den Lehrkraft-Link (mit #Schlüssel) verwenden.</main>`;
+  if (status === 'auth') return html`<${Aurora} /><${LoginScreen} title=${`Raum ${code} · Lehrkraft`} />`;
   if (status === 'error') return html`<${Aurora} /><main class="t-error card pad"><p>${error}</p><a class="btn" href="/">Zur Startseite</a></main>`;
   if (!v) return html`<${Aurora} /><main class="t-error"><${Logo} size=${40} /></main>`;
 
@@ -122,6 +123,7 @@ function App() {
       <button class="btn small" onClick=${copy}>${copied ? '✓ Kopiert' : '🔗 SuS-Link kopieren'}</button>
       <a class="btn small primary" href=${beamerUrl} target="bubbl-beamer">📺 Beamer öffnen</a>
       <a class="btn small" href=${`/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}`}>⬇︎ CSV</a>
+      <button class="btn small ghost" title="Abmelden" onClick=${async () => { await teacherLogout(); location.replace('/'); }}>⎋ Abmelden</button>
     </header>
     <main class="t-main">
       <section class="card pad col phase-ctl">

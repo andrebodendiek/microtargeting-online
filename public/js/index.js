@@ -1,4 +1,4 @@
-import { html, render, useState, Logo, Aurora, store, qs } from './lib.js';
+import { html, render, useState, useEffect, Logo, Aurora, store, qs, TeacherLogin, teacherStatus, teacherLogout } from './lib.js';
 
 const preset = (qs.get('c') || qs.get('code') || '').toUpperCase();
 if (preset) location.replace(`/play?c=${encodeURIComponent(preset)}`);
@@ -8,6 +8,9 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const rooms = store.get('bubbl:rooms', []);
+  const [me, setMe] = useState(null);
+  const refreshMe = () => teacherStatus().then(setMe);
+  useEffect(() => { refreshMe(); }, []);
 
   async function join(e) {
     e.preventDefault();
@@ -47,12 +50,14 @@ function App() {
         <div class="glass panel">
           <span class="kicker">Für Lehrkräfte</span>
           <h2>Neues Spiel starten</h2>
-          <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Keine Anmeldung, keine echten Namen.</p>
-          <button class="btn primary block" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : '+ Raum erstellen'}</button>
-          ${rooms.length > 0 && html`<div class="my-rooms">
-            <small class="muted">Deine letzten Räume</small>
-            ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
-          </div>`}
+          <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Die SchülerInnen brauchen keine Anmeldung und keine echten Namen.</p>
+          ${me == null ? html`<small class="muted">…</small>` : !me.teacher ? html`<${TeacherLogin} configured=${me.configured} onSuccess=${refreshMe} />` : html`
+            <button class="btn primary block" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : '+ Raum erstellen'}</button>
+            ${rooms.length > 0 && html`<div class="my-rooms">
+              <small class="muted">Deine letzten Räume</small>
+              ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
+            </div>`}
+            <button class="btn small ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}>⎋ Abmelden</button>`}
         </div>
       </section>
       ${err && html`<p class="error">${err}</p>`}

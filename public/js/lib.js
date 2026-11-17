@@ -31,6 +31,7 @@ export function useRoom(hello, { onKicked } = {}) {
       const msg = helloRef.current();
       if (!msg) return;
       sock.emit('hello', msg, (res) => {
+        if (res?.auth) { setError(res.error); setStatus('auth'); return; }
         if (res?.error) { setError(res.error); setStatus('error'); return; }
         if (res?.needJoin) { setStatus('needJoin'); return; }
         if (res?.token) store.set(`bubbl:token:${msg.code}`, res.token);
@@ -48,6 +49,46 @@ export function useRoom(hello, { onKicked } = {}) {
 
   const act = useCallback((type, data) => sockRef.current?.emit('act', { type, data }), []);
   return { state, status, error, act, sock: sockRef };
+}
+
+// ------------------------------------------------------------------ Lehrkraft-Anmeldung
+export async function teacherStatus() {
+  try { const r = await fetch('/api/me', { cache: 'no-store' }); return await r.json(); } catch { return { teacher: false, configured: true }; }
+}
+export async function teacherLogout() { await fetch('/api/logout', { method: 'POST' }); }
+
+export function TeacherLogin({ onSuccess, configured = true, compact }) {
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Anmeldung fehlgeschlagen.');
+      onSuccess?.();
+    } catch (e2) { setErr(e2.message); setBusy(false); setPw(''); }
+  }
+  if (!configured) return html`<p class="login-note">🔒 Der Lehrkraft-Zugang ist noch nicht eingerichtet. Auf dem Server muss die Umgebungsvariable <code>TEACHER_PASSWORD</code> gesetzt werden.</p>`;
+  return html`<form class=${`login ${compact ? 'compact' : ''}`} onSubmit=${submit}>
+    ${!compact && html`<p class="login-note">🔒 Nur für Lehrkräfte. Bitte mit dem Lehrkraft-Passwort anmelden.</p>`}
+    <input class="field" type="password" autocomplete="current-password" placeholder="Lehrkraft-Passwort" value=${pw} onInput=${(e) => setPw(e.target.value)} aria-label="Lehrkraft-Passwort" required />
+    <button class="btn primary block" disabled=${busy || !pw}>${busy ? 'Prüfe …' : 'Anmelden'}</button>
+    ${err && html`<p class="login-err">${err}</p>`}
+  </form>`;
+}
+
+export function LoginScreen({ title = 'Lehrkraft-Bereich' }) {
+  const [cfg, setCfg] = useState(true);
+  useEffect(() => { teacherStatus().then((s) => setCfg(s.configured)); }, []);
+  return html`<main class="login-screen"><div class="card login-card">
+    <${Logo} size=${38} />
+    <h2>${title}</h2>
+    <${TeacherLogin} configured=${cfg} onSuccess=${() => location.reload()} />
+    <a class="muted small-link" href="/">← Zur Startseite</a>
+  </div></main>`;
 }
 
 // ------------------------------------------------------------------ kleine Komponenten

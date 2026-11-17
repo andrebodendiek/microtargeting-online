@@ -25,18 +25,20 @@ Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna R
 - **Filterblase** und **politisches Microtargeting** als zuschaltbare Bonusphasen.
 
 ## Bedienung
-1. Startseite → **„Raum erstellen“**. Es öffnet sich das Lehrkraft-Cockpit (Link mit geheimem Schlüssel nach `#` – als Lesezeichen speichern).
+1. Startseite → mit dem **Lehrkraft-Passwort anmelden** → **„Raum erstellen“**. Es öffnet sich das Lehrkraft-Cockpit (Link mit geheimem Schlüssel nach `#` – als Lesezeichen speichern).
 2. **„Beamer öffnen“** → Fenster auf den Projektor ziehen, Doppelklick = Vollbild.
 3. SuS scannen den QR-Code (oder öffnen die Startseite und geben den 4-stelligen Code ein).
 4. Im Cockpit mit **„Weiter ▶“** durch die Schritte führen. Pro Schritt gibt es didaktische Hinweise und Werkzeuge (Gruppen neu bilden, Auswertung automatisch ausfüllen, Wahlbotschaften aufdecken, Notizen ausblenden …).
 5. Am Ende **CSV-Export** (entspricht der erweiterten Auswertungstabelle).
+
+**Zugriffsschutz:** Raum erstellen, Lehrkraft-Cockpit, Beamer-Ansicht und CSV-Export erfordern die Anmeldung mit dem Lehrkraft-Passwort (`TEACHER_PASSWORD`). Die Anmeldung gilt 30 Tage pro Browser (signiertes HttpOnly-Cookie) und wird bei einer Passwortänderung für alle ungültig. Zusätzlich braucht jeder Raum seinen geheimen Schlüssel aus dem Cockpit-Link. Fehlversuche werden gebremst. SchülerInnen treten weiterhin ohne Anmeldung nur mit dem Raumcode bei.
 
 Datenschutz: keine Namen, keine Accounts. SuS sind nur über Nummer und Tier-Avatar erkennbar. Räume werden 30 Tage nach der letzten Änderung gelöscht.
 
 ## Technik
 - Node.js 22, Express, Socket.IO (Echtzeit), Preact + htm ohne Build-Schritt
 - Persistenz: ein JSON-Dokument pro Raum in `DATA_DIR/rooms` (atomar geschrieben)
-- Lokal starten: `npm install && npm start` → http://localhost:3000
+- Lokal starten: `npm install && TEACHER_PASSWORD=test npm start` → http://localhost:3000
 - Tests: `npm test`
 - Demo/Lasttest mit Bots: `node scripts/simulate.js http://localhost:3000 CODE 20` (Bots spielen jede Phase automatisch mit)
 
@@ -48,6 +50,10 @@ Das Repo enthält `captain-definition` und `Dockerfile`.
 3. *HTTP Settings*: Container-Port **3000**, HTTPS aktivieren, **WebSocket Support** einschalten.
 4. *Deployment*: Methode 3 (GitHub/Webhook) mit diesem Repo und Branch – danach deployt jeder Push automatisch.
 
-Umgebungsvariablen (optional): `PORT` (Standard 3000), `DATA_DIR` (Standard `/data` im Container).
+5. *App Configs → Environmental Variables*: **`TEACHER_PASSWORD`** = euer Lehrkraft-Passwort (**Pflicht** – ohne diese Variable ist der Lehrkraft-Bereich gesperrt). Danach „Save & Update“.
+
+Weitere Umgebungsvariablen (optional): `SESSION_SECRET` (zusätzlicher Geheimwert für die Anmelde-Cookies), `PORT` (Standard 3000), `DATA_DIR` (Standard `/data` im Container).
+
+Lokal: `TEACHER_PASSWORD=test npm start`.
 
 Hinweis: Eine Instanz reicht für viele Klassen gleichzeitig. Nicht auf mehrere Instanzen skalieren (Spielstand liegt im Prozess).
