@@ -245,3 +245,86 @@ export function confetti(n = 80) {
 }
 
 export { CATEGORIES, CAT, POST, AD, PAGES, PHASE };
+
+// ------------------------------------------------------------------ Moderne Dropdown-Menüs (Bootstrap-Optik, eigene Logik)
+// items: [{ label, icon, hint, onClick, href, target, danger, disabled, active, divider, header }]
+// Menü wird per position:fixed an den Auslöser gehängt – so schneiden Tabellen/Scrollbereiche es nicht ab.
+function useMenu() {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const btn = useRef(null);
+  const menu = useRef(null);
+  const place = useCallback(() => {
+    const el = btn.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const mh = menu.current?.offsetHeight || 0; const mw = menu.current?.offsetWidth || 220;
+    const below = innerHeight - r.bottom > mh + 12 || r.top < mh + 12;
+    let left = Math.min(Math.max(8, r.right - mw), innerWidth - mw - 8);
+    setPos({ top: below ? r.bottom + 6 : r.top - mh - 6, left, minWidth: Math.max(r.width, 180), up: !below, alignStart: r.left + mw < innerWidth - 8 ? r.left : null });
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    place(); requestAnimationFrame(place);
+    const outside = (e) => { if (!menu.current?.contains(e.target) && !btn.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => {
+      if (e.key === 'Escape') { setOpen(false); btn.current?.focus(); }
+      if (e.key === 'Tab') setOpen(false);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const items = [...(menu.current?.querySelectorAll('.dropdown-item:not(.disabled)') || [])];
+        const i = items.indexOf(document.activeElement);
+        items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', key);
+    addEventListener('scroll', place, true); addEventListener('resize', place);
+    return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key); removeEventListener('scroll', place, true); removeEventListener('resize', place); };
+  }, [open]);
+  // Größe des Menüs ändert sich nach dem ersten Rendern (Mindestbreite, Inhalte) → neu ausrichten
+  useEffect(() => {
+    if (!open || !menu.current || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => place()); ro.observe(menu.current); return () => ro.disconnect();
+  }, [open, !!pos]);
+  useEffect(() => { if (open && pos) (menu.current?.querySelector('.dropdown-item.active') || menu.current?.querySelector('.dropdown-item:not(.disabled)'))?.focus({ preventScroll: true }); }, [open, !!pos]);
+  return { open, setOpen, pos, btn, menu };
+}
+
+function MenuList({ m, items, align, onPick }) {
+  if (!m.open) return null;
+  const style = m.pos ? `top:${m.pos.top}px;left:${align === 'start' && m.pos.alignStart != null ? m.pos.alignStart : m.pos.left}px;min-width:${m.pos.minWidth}px` : 'visibility:hidden';
+  return html`<ul class=${`dropdown-menu show bb-menu ${m.pos?.up ? 'up' : ''}`} style=${style} ref=${m.menu} role="menu">
+    ${items.filter(Boolean).map((it, i) => it.divider ? html`<li key=${i}><hr class="dropdown-divider" /></li>`
+      : it.header ? html`<li key=${i}><h6 class="dropdown-header">${it.header}</h6></li>`
+      : html`<li key=${i}>${(() => {
+        const inner = html`${it.icon && html`<i class=${`bi bi-${it.icon}`}></i>`}<span class="bb-item-text"><span>${it.label}</span>${it.hint && html`<small>${it.hint}</small>`}</span>${it.active && html`<i class="bi bi-check2 bb-check"></i>`}`;
+        const cls = `dropdown-item ${it.danger ? 'text-danger' : ''} ${it.disabled ? 'disabled' : ''} ${it.active ? 'active' : ''}`;
+        return it.href
+          ? html`<a class=${cls} href=${it.href} target=${it.target} role="menuitem" onClick=${() => m.setOpen(false)}>${inner}</a>`
+          : html`<button type="button" class=${cls} role="menuitem" disabled=${it.disabled} onClick=${() => { m.setOpen(false); onPick ? onPick(it) : it.onClick?.(); }}>${inner}</button>`;
+      })()}</li>`)}
+  </ul>`;
+}
+
+export function Dropdown({ label, icon, items, align = 'end', btnClass = 'btn', title, caret = true }) {
+  const m = useMenu();
+  return html`<div class="dropdown bb-dropdown">
+    <button type="button" class=${`${btnClass} ${caret ? 'dropdown-toggle' : ''} ${m.open ? 'show' : ''}`} ref=${m.btn} title=${title} aria-label=${title || (typeof label === 'string' ? label : undefined)}
+      aria-haspopup="menu" aria-expanded=${m.open} onClick=${() => m.setOpen(!m.open)}>
+      ${icon && html`<i class=${`bi bi-${icon}`}></i>`}${label && html`<span>${label}</span>`}
+    </button>
+    <${MenuList} m=${m} items=${items} align=${align} />
+  </div>`;
+}
+
+// Modernes Auswahlfeld als Ersatz für <select>: options [{ value, label, icon, emoji, hint }]
+export function SelectMenu({ value, options, onChange, size, placeholder = 'Bitte wählen', ariaLabel }) {
+  const m = useMenu();
+  const cur = options.find((o) => String(o.value) === String(value));
+  return html`<div class="dropdown bb-dropdown bb-select">
+    <button type="button" class=${`form-select bb-select-btn ${size === 'sm' ? 'form-select-sm' : ''} ${m.open ? 'open' : ''}`} ref=${m.btn} aria-label=${ariaLabel} aria-haspopup="listbox" aria-expanded=${m.open} onClick=${() => m.setOpen(!m.open)}>
+      ${cur ? html`${cur.emoji && html`<span class="bb-emoji">${cur.emoji}</span>`}${cur.icon && html`<i class=${`bi bi-${cur.icon}`}></i>`}<span class="bb-select-label">${cur.label}</span>` : html`<span class="muted">${placeholder}</span>`}
+    </button>
+    <${MenuList} m=${m} align="start" items=${options.map((o) => ({ ...o, label: o.emoji ? html`<span class="bb-emoji">${o.emoji}</span> ${o.label}` : o.label, active: String(o.value) === String(value) }))} onPick=${(it) => onChange(it.value)} />
+  </div>`;
+}

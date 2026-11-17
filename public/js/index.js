@@ -1,4 +1,4 @@
-import { html, render, useState, useEffect, Logo, Aurora, store, qs, TeacherLogin, teacherStatus, teacherLogout } from './lib.js';
+import { html, render, useState, useEffect, Dropdown, Logo, Aurora, store, qs, TeacherLogin, teacherStatus, teacherLogout } from './lib.js';
 
 const preset = (qs.get('c') || qs.get('code') || '').toUpperCase();
 if (preset) location.replace(`/play?c=${encodeURIComponent(preset)}`);
@@ -57,7 +57,12 @@ function App() {
               <small class="muted">Deine letzten Räume</small>
               ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
             </div>`}
-            <div class="row-btns"><a class="btn btn-sm" href="/editor"><i class="bi bi-pencil-square"></i> Inhalts-Editor & KI</a><button class="btn btn-sm btn-ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}><i class="bi bi-box-arrow-right"></i> Abmelden</button></div>`}
+            <div class="row-btns"><${Dropdown} btnClass="btn btn-sm" icon="person-circle" label="Angemeldet als Lehrkraft" align="start" items=${[
+              { label: 'Inhalts-Editor & KI', icon: 'pencil-square', hint: 'Beiträge, Anzeigen, Quiz aktualisieren', href: '/editor' },
+              ...(rooms.length ? [{ divider: true }, { header: 'Letzte Räume' }, ...rooms.slice(0, 6).map((r) => ({ label: r.code, icon: 'door-open', hint: new Date(r.at).toLocaleDateString('de-DE'), href: `/teacher?c=${r.code}#${r.key}` }))] : []),
+              { divider: true },
+              { label: 'Abmelden', icon: 'box-arrow-right', onClick: async () => { await teacherLogout(); refreshMe(); } },
+            ]} /></div>`}
         </div>
       </section>
       ${err && html`<p class="error">${err}</p>`}

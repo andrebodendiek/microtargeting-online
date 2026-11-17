@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useRoom, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
+  html, render, useState, useEffect, useRef, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
@@ -310,6 +310,29 @@ export function BeamerStage({ v }) {
   </div>`;
 }
 
+// Dezentes Menü unten rechts: Vollbild, Schriftgröße, großer QR-Code
+function BeamerMenu() {
+  const [scale, setScale] = useState(() => Number(localStorage.getItem('bubbl:beamerScale')) || 1);
+  const [qr, setQr] = useState(false);
+  const [, rerender] = useState(0);
+  useEffect(() => { document.documentElement.style.setProperty('--bscale', scale); try { localStorage.setItem('bubbl:beamerScale', scale); } catch { /* privat */ } }, [scale]);
+  useEffect(() => { const h = () => rerender((x) => x + 1); document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h); }, []);
+  const full = !!document.fullscreenElement;
+  const step = (d) => setScale((s) => Math.round(Math.min(1.4, Math.max(0.8, s + d)) * 100) / 100);
+  return html`<div class="beamer-menu">
+    <${Dropdown} btnClass="btn btn-sm beamer-menu-btn" icon="sliders" caret=${false} title="Beamer-Einstellungen" items=${[
+      { header: 'Beamer' },
+      { label: full ? 'Vollbild beenden' : 'Vollbild', icon: full ? 'fullscreen-exit' : 'arrows-fullscreen', hint: 'oder Doppelklick', onClick: () => (full ? document.exitFullscreen() : document.documentElement.requestFullscreen?.()).catch?.(() => {}) },
+      { label: 'QR-Code groß anzeigen', icon: 'qr-code', hint: 'für Nachzügler', onClick: () => setQr(true) },
+      { header: `Schriftgröße · ${Math.round(scale * 100)} %` },
+      { label: 'Größer', icon: 'zoom-in', disabled: scale >= 1.4, onClick: () => step(0.1) },
+      { label: 'Kleiner', icon: 'zoom-out', disabled: scale <= 0.8, onClick: () => step(-0.1) },
+      { label: 'Zurücksetzen', icon: 'arrow-counterclockwise', disabled: scale === 1, onClick: () => setScale(1) },
+    ]} />
+    ${qr && html`<div class="qr-overlay" onClick=${() => setQr(false)}><div class="glass qr-card"><${JoinBox} big /><small class="muted">Klicken zum Schließen</small></div></div>`}
+  </div>`;
+}
+
 function App() {
   const { state: v, status, error } = useRoom(() => ({ code, role: 'beamer', key }));
   useEffect(() => {
@@ -320,7 +343,7 @@ function App() {
   if (status === 'auth') return html`<${Aurora} /><${LoginScreen} title="Beamer-Ansicht" />`;
   if (status === 'error') return html`<${Aurora} /><div class="b-error glass"><${Logo} size=${40} /><p>${error}</p></div>`;
   if (!v) return html`<${Aurora} /><div class="b-error"><${Logo} size=${60} /></div>`;
-  return html`<${Aurora} />${status === 'offline' && html`<div class="offline-banner">Verbindung unterbrochen …</div>`}<${BeamerStage} v=${v} />`;
+  return html`<${Aurora} />${status === 'offline' && html`<div class="offline-banner">Verbindung unterbrochen …</div>`}<${BeamerStage} v=${v} /><${BeamerMenu} />`;
 }
 
 if (document.getElementById('app') && location.pathname.startsWith('/beamer')) render(html`<${App} />`, document.getElementById('app'));

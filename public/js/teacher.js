@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useRoom, LoginScreen, teacherLogout, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, Stepper, Progress,
+  html, render, useState, useEffect, useRef, useRoom, Dropdown, SelectMenu, LoginScreen, teacherLogout, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, Stepper, Progress,
   CATEGORIES, CAT, PHASE,
 } from './lib.js';
 
@@ -32,7 +32,9 @@ function Settings({ v, act }) {
   return html`<div class="card pad bb-col">
     <h3><i class="bi bi-gear"></i> Einstellungen</h3>
     ${num('maxLikes', 1, 22, 'Likes pro Person', 'Original: 10')}
-    ${num('groupCount', 1, 7, 'Anzahl Gruppen', 'max. 7 (eine je Kategorie)')}
+    <div class="set"><span>Anzahl Gruppen<small class="muted">max. 7 (eine je Kategorie)</small></span>
+      <${SelectMenu} value=${s.groupCount} ariaLabel="Anzahl Gruppen" onChange=${(val) => act('settings', { groupCount: Number(val) })} options=${[1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: `${n} ${n === 1 ? 'Gruppe' : 'Gruppen'}`, icon: 'people' }))} />
+    </div>
     ${num('budget', 0, 60, 'Werbebudget je Anzeige', `0 = automatisch (aktuell ${v.budget})`)}
     <div class="set"><span>Erweiterungen</span>
       <div class="bb-row gap wrap">${OPTIONAL.map((id) => html`<label class="toggle"><input type="checkbox" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} /> ${PHASE[id].icon} ${PHASE[id].title}</label>`)}</div>
@@ -83,11 +85,15 @@ function Players({ v, act }) {
       <div class="prow head"><span>ID</span><span>Gruppe</span><span>Status</span><span title="Hauptinteresse laut Likes → laut Tracking">Interesse (Likes → Tracking)</span><span title="gesammelte Datenpunkte">Daten</span><span></span></div>
       ${v.players.map((p) => html`<div class="prow">
         <span class="bb-row gap"><${Avatar} id=${p.id} avatar=${p.avatar} size=${34} online=${p.online} /></span>
-        <span>${groups.length ? html`<select class="form-select form-select-sm" value=${p.group || ''} onChange=${(e) => act('setGroup', { id: p.id, group: e.target.value })}>${groups.map((g) => html`<option value=${g.id}>${g.id}</option>`)}</select>` : html`<span class="muted">–</span>`}</span>
+        <span>${groups.length ? html`<${SelectMenu} size="sm" value=${p.group || ''} ariaLabel=${`Gruppe von ID ${p.id}`} onChange=${(g) => act('setGroup', { id: p.id, group: g })} options=${groups.map((g) => ({ value: g.id, label: g.id, hint: g.cats.map((c) => CAT[c].name).join(', ') }))} />` : html`<span class="muted">–</span>`}</span>
         <span class="small">${stat(p)}</span>
         <span class="small">${p.topLikes ? CAT[p.topLikes].icon : '·'} → ${p.topFull ? CAT[p.topFull].icon : '·'} ${p.topHidden && p.topHidden !== p.topLikes ? html`<span class="status-pill warn" title="Tracking zeigt anderes Interesse">🕵️ ${CAT[p.topHidden].icon}</span>` : ''}</span>
         <span class="small num">${p.dataPoints ?? '–'}</span>
-        <button class="icon-btn" title="Entfernen" onClick=${() => confirm(`ID ${p.id} entfernen?`) && act('kick', { id: p.id })}>✕</button>
+        <${Dropdown} btnClass="icon-btn" icon="three-dots-vertical" caret=${false} title=${`Aktionen für ID ${p.id}`} items=${[
+          { header: `ID ${p.id} ${p.avatar} · ${p.online ? 'online' : 'offline'}` },
+          ...(groups.length ? [{ header: 'In Gruppe verschieben' }, ...groups.map((g) => ({ label: `Gruppe ${g.id}`, icon: 'arrow-right-circle', hint: g.cats.map((c) => CAT[c].name).join(', '), active: p.group === g.id, onClick: () => act('setGroup', { id: p.id, group: g.id }) })), { divider: true }] : []),
+          { label: 'Aus dem Raum entfernen', icon: 'person-x', danger: true, onClick: () => confirm(`ID ${p.id} entfernen?`) && act('kick', { id: p.id }) },
+        ]} />
       </div>`)}
     </div>
     ${groups.length > 0 && html`<div class="group-list">${groups.map((g) => html`<div class="glist-item"><${GroupBadge} gid=${g.id} />${g.cats.map((c) => html`<${CatChip} cat=${c} small />`)}<span class="muted small">${g.members.length} Pers.</span></div>`)}</div>`}
@@ -124,6 +130,7 @@ function App() {
 
   const idx = v.phases.indexOf(v.phase);
   const go = (d) => { const n = v.phases[idx + d]; if (n) act('setPhase', { phase: n }); };
+  const deleteRoom = () => { if (confirm('Raum endgültig löschen? Alle Daten gehen verloren.')) { sock.current?.emit('deleteRoom', { key }); store.set('bubbl:rooms', store.get('bubbl:rooms', []).filter((r) => r.code !== code)); setTimeout(() => location.replace('/'), 300); } };
   const copy = async () => { try { await navigator.clipboard.writeText(joinUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { prompt('Link kopieren:', joinUrl); } };
 
   return html`<${Aurora} />
@@ -132,17 +139,31 @@ function App() {
       <${Logo} size=${28} sub="Lehrkraft" />
       <div class="t-code"><small>Raumcode</small><b>${v.code}</b></div>
       <span class="spacer"></span>
-      <button class="btn btn-sm" onClick=${copy}>${copied ? '✓ Kopiert' : html`<i class="bi bi-link-45deg"></i> SuS-Link kopieren`}</button>
+      ${copied && html`<span class="status-pill ok"><i class="bi bi-check2"></i> Link kopiert</span>`}
       <a class="btn btn-sm btn-primary" href=${beamerUrl} target="bubbl-beamer"><i class="bi bi-display"></i> Beamer öffnen</a>
-      <a class="btn btn-sm" href=${`/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}`}><i class="bi bi-download"></i> CSV</a>
-      <a class="btn btn-sm" href="/editor" target="bubbl-editor"><i class="bi bi-pencil-square"></i> Inhalte</a>
-      <button class="btn btn-sm btn-ghost" title="Abmelden" onClick=${async () => { await teacherLogout(); location.replace('/'); }}><i class="bi bi-box-arrow-right"></i> Abmelden</button>
+      <${Dropdown} btnClass="btn btn-sm" icon="door-open" label="Raum" items=${[
+        { header: `Raum ${v.code} · ${v.players.length} Teilnehmende` },
+        { label: 'SchülerInnen-Link kopieren', icon: 'link-45deg', hint: joinUrl.replace(/^https?:\/\//, ''), onClick: copy },
+        { label: 'Beitrittsseite öffnen', icon: 'qr-code', hint: 'Zum Testen als SchülerIn', href: joinUrl, target: '_blank' },
+        { label: 'Daten als CSV exportieren', icon: 'filetype-csv', href: `/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}` },
+        { divider: true },
+        { label: 'Neueste Inhalte übernehmen', icon: 'box-arrow-in-down', hint: 'Nur vor Spielbeginn', disabled: v.phase !== 'lobby', onClick: () => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error)) },
+        { label: 'Neue Runde starten', icon: 'arrow-counterclockwise', hint: 'Spieldaten löschen, Teilnehmende bleiben', onClick: () => confirm('Alle Spieldaten (Likes, Gruppen, Bewertungen …) löschen und zur Lobby zurückkehren? Die Teilnehmenden bleiben im Raum.') && act('resetPlayerData') },
+        { label: 'Raum löschen', icon: 'trash', danger: true, onClick: deleteRoom },
+      ]} />
+      <${Dropdown} btnClass="btn btn-sm btn-ghost" icon="person-circle" label="Lehrkraft" items=${[
+        { label: 'Inhalts-Editor & KI', icon: 'pencil-square', href: '/editor', target: 'bubbl-editor' },
+        { label: 'Startseite / meine Räume', icon: 'house', href: '/' },
+        { divider: true },
+        { label: 'Abmelden', icon: 'box-arrow-right', onClick: async () => { await teacherLogout(); location.replace('/'); } },
+      ]} />
     </header>
     <main class="t-main">
       <section class="card pad bb-col phase-ctl">
         <div class="bb-row between wrap gap">
           <div><small class="muted">Aktueller Schritt ${idx + 1} von ${v.phases.length}</small><h2>${PHASE[v.phase].icon} ${PHASE[v.phase].title}</h2></div>
           <div class="bb-row gap">
+            <${Dropdown} btnClass="btn" icon="list-ol" label="Springen" items=${[{ header: 'Zu Schritt springen' }, ...v.phases.map((id, i) => ({ label: `${i + 1}. ${PHASE[id].title}`, icon: i < idx ? 'check-circle' : i === idx ? 'record-circle' : 'circle', hint: PHASE[id].optional ? 'Erweiterung' : undefined, active: id === v.phase, onClick: () => act('setPhase', { phase: id }) }))]} />
             <button class="btn" disabled=${idx <= 0} onClick=${() => go(-1)}><i class="bi bi-chevron-left"></i> Zurück</button>
             <button class="btn btn-primary big-next" disabled=${idx >= v.phases.length - 1} onClick=${() => go(1)}>${v.phases[idx + 1] ? `Weiter: ${PHASE[v.phases[idx + 1]].title} ▶` : html`<i class="bi bi-flag-fill"></i> Letzter Schritt`}</button>
           </div>
@@ -162,7 +183,7 @@ function App() {
             <h3><i class="bi bi-exclamation-triangle"></i> Raum verwalten</h3>
             <div class="bb-row gap wrap">
               <button class="btn btn-sm" onClick=${() => confirm('Alle Spieldaten (Likes, Gruppen, Bewertungen …) löschen und zur Lobby zurückkehren? Die Teilnehmenden bleiben im Raum.') && act('resetPlayerData')}><i class="bi bi-arrow-counterclockwise"></i> Neue Runde (Daten zurücksetzen)</button>
-              <button class="btn btn-sm btn-outline-danger" onClick=${() => { if (confirm('Raum endgültig löschen? Alle Daten gehen verloren.')) { sock.current?.emit('deleteRoom', { key }); store.set('bubbl:rooms', store.get('bubbl:rooms', []).filter((r) => r.code !== code)); setTimeout(() => location.replace('/'), 300); } }}><i class="bi bi-trash"></i> Raum löschen</button>
+              <button class="btn btn-sm btn-outline-danger" onClick=${deleteRoom}><i class="bi bi-trash"></i> Raum löschen</button>
             </div>
             <small class="muted">Räume werden 30 Tage nach der letzten Änderung automatisch gelöscht. Es werden keine Namen gespeichert.</small>
           </div>

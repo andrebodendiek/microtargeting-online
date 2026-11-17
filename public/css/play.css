@@ -250,3 +250,5 @@ input[type=range] { width: 100%; accent-color: var(--akzent-2); height: 28px; }
 .quiz-right { border: 2px solid var(--ok); }
 .quiz-wrong { border: 2px solid var(--bad); }
 .pseudo { white-space: pre-wrap; font-size: 12.5px; }
+.avatar-btn { border: 0; background: none; padding: 0; border-radius: 50%; }
+.avatar-btn:focus-visible { outline: 3px solid rgba(31, 176, 199, 0.5); outline-offset: 2px; }

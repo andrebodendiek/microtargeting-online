@@ -1,5 +1,5 @@
 // Inhalts-Editor mit KI-Assistent (nur für angemeldete Lehrkräfte)
-import { html, render, useState, useEffect, useRef, Logo, Aurora, CatChip, PostArt, AdVisual, LoginScreen, CATEGORIES, CAT, PAGES } from './lib.js';
+import { html, render, useState, useEffect, useRef, Logo, Aurora, CatChip, PostArt, AdVisual, LoginScreen, Dropdown, SelectMenu, CATEGORIES, CAT, PAGES } from './lib.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const uid = (p) => `${p}${Math.random().toString(36).slice(2, 8)}`;
@@ -20,7 +20,7 @@ const Text = ({ value, onInput, max, area, rows = 2 }) => area
 const Emojis = ({ value, onInput, max = 3 }) => html`<input class="form-control emoji-in" value=${(value || []).join(' ')} onInput=${(e) => onInput(splitEmoji(e.target.value).slice(0, max))} placeholder="z. B. 🎮 🏆" />`;
 const Colors = ({ value, onInput }) => html`<span class="colors">${[0, 1].map((i) => html`<input type="color" value=${value?.[i] || '#cccccc'} onInput=${(e) => { const n = [...(value || ['#cccccc', '#cccccc'])]; n[i] = e.target.value; onInput(n); }} />`)}</span>`;
 const CatPick = ({ value = [], onInput, max = 3 }) => html`<div class="bb-row wrap gap">${CATEGORIES.map((c) => html`<${CatChip} cat=${c.id} small on=${value.includes(c.id)} onClick=${() => onInput(value.includes(c.id) ? value.filter((x) => x !== c.id) : [...value, c.id].slice(-max))} />`)}</div>`;
-const Select = ({ value, onInput, options }) => html`<select class="form-select" value=${value} onChange=${(e) => onInput(e.target.value)}>${options.map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select>`;
+const Select = ({ value, onInput, options }) => html`<${SelectMenu} value=${value} onChange=${onInput} options=${options.map(([v, l, hint]) => ({ value: v, label: l, hint }))} />`;
 const move = (arr, i, d) => { const a = arr.slice(); const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; };
 
 // ------------------------------------------------------------------ Tabs
@@ -225,7 +225,7 @@ function Assistant({ data, dirty, reload, onApplied, toast }) {
     <div class="card pad bb-col">
       <h3><i class="bi bi-alarm"></i> Automatisierung</h3>
       <p class="muted small">Die KI prüft die Inhalte regelmäßig auf Aktualität und legt Vorschläge ab.</p>
-      <${Field} label="Automatischer Aktualitäts-Check"><${Select} value=${auto.schedule} onInput=${(v) => saveAuto({ schedule: v })} options=${[['off', 'aus'], ['weekly', 'wöchentlich'], ['monthly', 'monatlich']]} /><//>
+      <${Field} label="Automatischer Aktualitäts-Check"><${Select} value=${auto.schedule} onInput=${(v) => saveAuto({ schedule: v })} options=${[['off', 'aus', 'nur manuell'], ['weekly', 'wöchentlich', 'jeden 7. Tag'], ['monthly', 'monatlich', 'alle 30 Tage']]} /><//>
       <${Field} label="Dauerhafter Schwerpunkt" hint="optional"><input class="form-control" maxlength="300" value=${auto.focus} onChange=${(e) => saveAuto({ focus: e.target.value })} placeholder="z. B. regionaler Bezug Ostfriesland" /><//>
       <label class="toggle"><input type="checkbox" checked=${auto.autoApply} onChange=${(e) => saveAuto({ autoApply: e.target.checked })} /> Vorschläge automatisch übernehmen</label>
       ${auto.autoApply && html`<small class="muted"><i class="bi bi-exclamation-triangle"></i> Änderungen gehen dann ohne Prüfung live (laufende Räume behalten ihre Inhalte). Im Verlauf jederzeit rückgängig zu machen.</small>`}
@@ -264,10 +264,20 @@ function App() {
       <${Logo} size=${28} sub="Inhalts-Editor" />
       <span class="spacer"></span>
       ${dirty && html`<span class="status-pill warn">Ungespeicherte Änderungen</span>`}
-      <button class="btn btn-sm btn-ghost" disabled=${!dirty} onClick=${() => setDraft(clone(data.content))}>Verwerfen</button>
       <button class="btn btn-sm btn-primary" disabled=${!dirty || busy} onClick=${save}><i class="bi bi-floppy"></i> Speichern</button>
-      <button class="btn btn-sm btn-ghost" onClick=${() => confirm('Alle Inhalte auf den Standard (Originalmaterial) zurücksetzen? Der aktuelle Stand bleibt im Verlauf.') && post('/api/content/reset')}><i class="bi bi-arrow-counterclockwise"></i> Standard</button>
-      <a class="btn btn-sm" href="/"><i class="bi bi-arrow-left"></i> Start</a>
+      <${Dropdown} btnClass="btn btn-sm" icon="three-dots" label="Mehr" items=${[
+        { label: 'Änderungen verwerfen', icon: 'x-circle', disabled: !dirty, onClick: () => setDraft(clone(data.content)) },
+        { label: 'Verlauf anzeigen', icon: 'clock-history', hint: `${data.history.length} gespeicherte Versionen`, onClick: () => setTab('history') },
+        { label: 'Inhalte exportieren', icon: 'filetype-json', hint: 'Aktuellen Stand als Datei sichern', onClick: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data.content, null, 2)], { type: 'application/json' })); a.download = `bubbl-inhalte-${new Date().toISOString().slice(0, 10)}.json`; a.click(); } },
+        { label: 'Inhalte importieren …', icon: 'upload', hint: 'JSON-Datei als Entwurf laden', onClick: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json'; i.onchange = async () => { try { setDraft(JSON.parse(await i.files[0].text())); toast('Import geladen – prüfen und speichern'); } catch { toast('Datei konnte nicht gelesen werden'); } }; i.click(); } },
+        { divider: true },
+        { label: 'Auf Standard zurücksetzen', icon: 'arrow-counterclockwise', danger: true, hint: 'Originalmaterial; aktueller Stand bleibt im Verlauf', onClick: () => confirm('Alle Inhalte auf den Standard (Originalmaterial) zurücksetzen? Der aktuelle Stand bleibt im Verlauf.') && post('/api/content/reset') },
+      ]} />
+      <${Dropdown} btnClass="btn btn-sm btn-ghost" icon="person-circle" label="Lehrkraft" items=${[
+        { label: 'Startseite / meine Räume', icon: 'house', href: '/' },
+        { divider: true },
+        { label: 'Abmelden', icon: 'box-arrow-right', onClick: async () => { await fetch('/api/logout', { method: 'POST' }); location.replace('/'); } },
+      ]} />
     </header>
     <main class="ed-main">
       <section class="card pad bb-col ed-panel">

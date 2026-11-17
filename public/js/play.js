@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useMemo, useRoom, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
+  html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
   PostArt, PageHead, AdVisual, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, AVATARS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
@@ -409,6 +409,23 @@ function Reflexion({ v, act }) {
   </section>`;
 }
 
+// ------------------------------------------------------------------ Profil-Menü (oben rechts)
+function PlayerMenu({ v, act }) {
+  async function auskunft() {
+    const r = await fetch(`/api/rooms/${code}/auskunft`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: store.get(tokenKey) }) });
+    if (!r.ok) return alert('Auskunft gerade nicht möglich.');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(await r.json(), null, 2)], { type: 'application/json' }));
+    a.download = `bubbl-datenauskunft-id${v.me.id}.json`; a.click();
+  }
+  return html`<${Dropdown} btnClass="avatar-btn" caret=${false} title="Profil-Menü" label=${html`<${Avatar} id=${v.me.id} avatar=${v.me.avatar} size=${38} />`} items=${[
+    { header: `Nutzer-ID #${v.me.id} · Raum ${code}` },
+    { label: 'Aufgabe & Fortschritt', icon: 'list-check', hint: PHASE[v.phase].title, onClick: () => scrollTo({ top: 0, behavior: 'smooth' }) },
+    { label: 'Meine Daten herunterladen', icon: 'file-earmark-lock', hint: 'Auskunft nach Art. 15 DSGVO', onClick: auskunft },
+    { divider: true },
+    { label: 'Raum verlassen', icon: 'box-arrow-right', danger: true, hint: 'Dein Profil bleibt im Raum gespeichert', onClick: () => { if (confirm('Raum verlassen? Mit dem gleichen Gerät kommst du über den Raumcode wieder in dein Profil.')) location.href = '/'; } },
+  ]} />`;
+}
+
 // ------------------------------------------------------------------ App
 function Join({ onJoin, error }) {
   const [av, setAv] = useState(AVATARS[Math.floor(Math.random() * AVATARS.length)]);
@@ -445,7 +462,7 @@ function App() {
       <${Logo} size=${26} />
       <span class="spacer"></span>
       ${v.me.group && ['auswertung', 'werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
-      <${Avatar} id=${v.me.id} avatar=${v.me.avatar} size=${38} />
+      <${PlayerMenu} v=${v} act=${act} />
     </header>
     <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} /></nav>
     <main class="feed-main">
