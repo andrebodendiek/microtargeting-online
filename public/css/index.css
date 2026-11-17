@@ -1,0 +1,20 @@
+.landing { max-width: 980px; margin: 0 auto; padding: 56px 16px 40px; display: flex; flex-direction: column; gap: 28px; }
+.hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.hero h1 { font-size: clamp(34px, 6vw, 60px); font-weight: 800; letter-spacing: -0.035em; }
+.grad { background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { max-width: 640px; font-size: 18px; margin: 0; }
+.landing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.panel { padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { font-size: 26px; }
+.kicker { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 800; color: var(--akzent); }
+.code-input { font-size: 34px; font-weight: 800; text-align: center; letter-spacing: 0.35em; text-transform: uppercase; padding: 14px; }
+.small { font-size: 14px; margin: 0; }
+.my-rooms { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.room-link { display: flex; justify-content: space-between; padding: 9px 14px; border-radius: 12px; background: var(--field); text-decoration: none; color: var(--text); transition: transform 0.15s; }
+.room-link:hover { transform: translateX(3px); }
+.room-link b { letter-spacing: 0.15em; }
+.error { text-align: center; color: var(--bad); font-weight: 700; margin: 0; }
+.how { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px; padding: 18px; }
+.how-item { display: flex; flex-direction: column; gap: 4px; padding: 10px; }
+.how-item span { font-size: 28px; }
+.foot { text-align: center; font-size: 13px; }
