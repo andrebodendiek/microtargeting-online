@@ -75,15 +75,6 @@ for (const b of bots) b.s.on('state', async (st) => {
     for (let k = 0; k < 3; k++) { b.act('weights', { weights: { like: 1 + Math.round(Math.random() * 6) / 2, dwell: Math.round(Math.random() * 8) / 2, open: Math.round(Math.random() * 4) / 2, read: Math.round(Math.random() * 4) / 2, threshold: 0 } }); await sleep(700); }
   }
   if (st.phase === 'profil' && st.profile && !b.inf) { b.inf = true; for (const i of st.profile.inferences) b.act('infer', { key: i.key, value: Math.random() < 0.55 }); }
-  if (st.phase === 'auswertung' && st.group && !b.tal && st.group.members[0]?.id === b.id) {
-    b.tal = true; await sleep(800);
-    for (const c of st.group.cats) {
-      const counts = {};
-      for (const [pid, ids] of Object.entries(st.group.postLikes)) if (ROUND1.find((p) => p.id === pid)?.cat === c) for (const id of ids) counts[id] = (counts[id] || 0) + 1;
-      for (const [id, n] of Object.entries(counts)) { b.act('tally', { cat: c, id: Number(id), count: Math.random() < 0.08 ? n + 1 : n }); await sleep(60); }
-    }
-    b.act('tallyDone', { done: true });
-  }
   if (st.phase === 'werbung' && st.group && st.adWork && !b.adv && st.group.members[0]?.id === b.id) {
     b.adv = true; await sleep(1000);
     for (const adId of st.group.ads) {

@@ -41,10 +41,10 @@ test('Auswertung, Budget, Algorithmus und Duell', () => {
   for (const p of sport) G.actions.like(r, ps[0], { postId: p.id });
   G.actions.track(r, ps[1], { dwell: { [sport[0].id]: 5000 }, read: { [sport[0].id]: 5000 }, opens: { [sport[0].id]: 1 } });
   G.actions.setPhase(r, null, { phase: 'auswertung' });
-  G.actions.autoTally(r);
   const v = G.staffView(r);
-  assert.equal(v.db.sport[ps[0].id], 3);
-  assert.ok(v.groups.every((g) => g.accuracy === 1));
+  assert.equal(v.db.sport[ps[0].id], 3, 'Datenbank entsteht automatisch');
+  assert.equal(v.likeEvents.length, 3);
+  assert.equal(G.playerView(r, ps[0]).dbRow.top, 'sport');
   G.actions.setPhase(r, null, { phase: 'werbung' });
   const g = r.groups.find((x) => x.ads.includes('laufschuh1'));
   const member = ps.find((p) => p.group === g.id);

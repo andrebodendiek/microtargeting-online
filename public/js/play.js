@@ -188,40 +188,31 @@ function GroupHeader({ g, children }) {
   </div>`;
 }
 
-function Auswertung({ v, act }) {
-  const g = v.group;
-  if (!g) return html`<div class="glass pad">Du bist noch keiner Gruppe zugeordnet. Die Lehrkraft teilt dich gleich ein.</div>`;
-  const posts = (cat) => Object.values(POST).filter((p) => p.round === 1 && p.cat === cat);
-  return html`<section class="bb-col">
-    <${GroupHeader} g=${g}><p class="muted small">Ihr seid für ${g.cats.length > 1 ? 'diese Kategorien' : 'diese Kategorie'} zuständig. Alle Gruppenmitglieder sehen live dieselbe Tabelle.</p><//>
-    ${g.cats.map((cat) => html`<div class="glass pad">
-      <h3>${CAT[cat].icon} Beiträge zu ${CAT[cat].name}</h3>
-      <div class="like-posts">
-        ${posts(cat).map((p) => html`<div class="like-post">
-          <${PostArt} post=${p} small />
-          <div><b>${p.headline}</b>
-            <div class="id-stickers">${(g.postLikes[p.id] || []).length ? (g.postLikes[p.id] || []).sort((a, b) => a - b).map((id) => html`<span class="sticker">❤️ ${id}</span>`) : html`<small class="muted">keine Likes</small>`}</div>
-          </div>
-        </div>`)}
-      </div>
-    </div>`)}
+function Auswertung({ v }) {
+  const r = v.dbRow;
+  if (!r) return null;
+  const max = Math.max(1, ...Object.values(r.counts));
+  const liked = v.me.likes.map((id) => POST[id]).filter(Boolean);
+  return html`<section class="bb-col stagger">
     <div class="glass pad">
-      <h3>Auswertung der Likes</h3>
-      <p class="muted small">Tragt für jede ID ein, wie viele Likes sie eurer Kategorie gegeben hat.</p>
-      <div class="tally" style=${`--cols:${g.cats.length}`}>
-        <div class="tally-row head"><span>ID</span>${g.cats.map((c) => html`<span>${CAT[c].icon} ${CAT[c].name}</span>`)}</div>
-        ${v.ids.map((id) => html`<div class="tally-row">
-          <span class="tally-id">#${id}</span>
-          ${g.cats.map((c) => { const n = g.tally[c]?.[id] || 0; return html`<span class=${`stepper-ctl ${n ? 'has' : ''}`} style=${`--c:${CAT[c].color}`}>
-            <button disabled=${g.tallyDone || !n} onClick=${() => act('tally', { cat: c, id, count: n - 1 })} aria-label="weniger">−</button>
-            <b>${n ? 'x'.repeat(Math.min(n, 5)) + (n > 5 ? '…' : '') : '·'}</b>
-            <button disabled=${g.tallyDone} onClick=${() => act('tally', { cat: c, id, count: n + 1 })} aria-label="mehr">+</button>
-          </span>`; })}
-        </div>`)}
+      <span class="kicker">Deine Zeile in der bubbl-Datenbank</span>
+      <h3>Nutzer-ID #${v.me.id}</h3>
+      <div class="db-row-mine">
+        ${CATEGORIES.map((c) => { const n = r.counts[c.id] || 0; return html`<div class=${`db-cell ${n ? 'has' : ''} ${r.top === c.id ? 'top' : ''}`} style=${`--c:${c.color};--k:${n / max}`}>
+          <span class="db-cell-icon">${c.icon}</span><b>${n}</b><small>${c.name}</small></div>`; })}
       </div>
-      <button class=${`btn w-100 ${g.tallyDone ? '' : 'btn-primary'}`} onClick=${() => { act('tallyDone', { done: !g.tallyDone }); if (!g.tallyDone) confetti(50); }}>
-        ${g.tallyDone ? '✓ Abgegeben – nochmal bearbeiten' : 'Auswertung abgeben'}
-      </button>
+      ${r.top ? html`<p class="db-verdict">So sieht bubbl dich: <b>${CATEGORIES.filter((c) => r.counts[c.id] === max).map((c) => `${c.icon} ${c.name}`).join(' und ')}-Fan</b> – wie ${r.sameTop - 1 > 0 ? `${r.sameTop - 1} weitere Person${r.sameTop - 1 === 1 ? '' : 'en'}` : 'sonst niemand'} in der Klasse.</p>`
+        : html`<p class="db-verdict">Du hast nichts geliked – für bubbl bist du (noch) ein unbeschriebenes Blatt. Oder doch nicht? 🤔</p>`}
+      <p class="muted small">Die ganze Tabelle hat ${r.players} Zeilen (eine pro Person) und 7 Spalten (eine pro Kategorie) – also ${r.rows} Felder. Erstellt in Millisekunden, ohne dass jemand zählen musste.</p>
+    </div>
+    ${liked.length > 0 && html`<div class="glass pad">
+      <h3>Daraus wurde deine Zeile berechnet</h3>
+      <div class="liked-list">${liked.map((p) => html`<div class="liked-item"><${PostArt} post=${p} small /><span>${p.headline}</span><${CatChip} cat=${p.cat} small /></div>`)}</div>
+      <p class="muted small">Du hast nur geliked – die Kategorie hat bubbl selbst zugeordnet.</p>
+    </div>`}
+    <div class="glass pad">
+      <h3>🤔 Denk mal nach</h3>
+      <ol class="think"><li>Welche Werbung würdest du an deiner Stelle als Werbekunde schicken?</li><li>Stimmt das Bild, das die Tabelle von dir zeichnet?</li><li>Was steht <b>nicht</b> in der Tabelle – und könnte bubbl trotzdem wissen?</li></ol>
     </div>
   </section>`;
 }
@@ -257,7 +248,7 @@ function Werbung({ v, act }) {
   const g = v.group;
   if (!g) return html`<div class="glass pad">Du bist noch keiner Gruppe zugeordnet.</div>`;
   return html`<section class="bb-col">
-    <${GroupHeader} g=${g}><p class="muted small">Die Tabelle ist eure gemeinsame Datenbank aus Schritt 2 (alle Gruppen). Hervorgehobene Spalten = eure gewählten Kategorien.</p><//>
+    <${GroupHeader} g=${g}><p class="muted small">Die Tabelle ist die automatisch erstellte Datenbank aus Schritt 3. Hervorgehobene Spalten = eure gewählten Kategorien.</p><//>
     ${g.ads.map((a) => v.adWork[a] && html`<${AdTargeting} key=${a} adId=${a} w=${v.adWork[a]} v=${v} act=${act} />`)}
   </section>`;
 }
@@ -461,7 +452,7 @@ function App() {
     <header class="appbar glass">
       <${Logo} size=${26} />
       <span class="spacer"></span>
-      ${v.me.group && ['auswertung', 'werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
+      ${v.me.group && ['werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
       <${PlayerMenu} v=${v} act=${act} />
     </header>
     <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} /></nav>

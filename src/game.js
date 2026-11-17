@@ -95,12 +95,11 @@ export function formGroups(room) {
   const ps = playersOf(room);
   const n = clamp(Math.min(room.settings.groupCount, Math.max(1, ps.length)), 1, 7);
   const groups = Array.from({ length: n }, (_, i) => ({
-    id: GROUP_LETTERS[i], cats: [], ads: [], tally: {}, tallyDone: false,
+    id: GROUP_LETTERS[i], cats: [], ads: [],
     weights: { ...START_WEIGHTS },
   }));
   CAT_IDS.forEach((c, i) => groups[i % n].cats.push(c));
   ADS.forEach((a, i) => groups[i % n].ads.push(a.id));
-  groups.forEach((g) => g.cats.forEach((c) => { g.tally[c] = {}; }));
   ps.forEach((p, i) => { p.group = groups[i % n].id; });
   room.groups = groups;
   room.adWork = Object.fromEntries(ADS.map((a) => [a.id, { cats: [], targets: [], done: false }]));
@@ -256,25 +255,11 @@ function trackingStats(p) {
   };
 }
 
-// Datenbank, wie sie die Gruppen in Schritt 2 erstellt haben
-function groupDb(room) {
-  const db = Object.fromEntries(CAT_IDS.map((c) => [c, {}]));
-  for (const g of room.groups || []) for (const c of g.cats) db[c] = { ...(g.tally[c] || {}) };
-  return db;
-}
-function truthDb(room) {
+// Automatisch erstellte Datenbank: Likes je Person und Kategorie
+function likeDb(room) {
   const db = Object.fromEntries(CAT_IDS.map((c) => [c, {}]));
   for (const p of playersOf(room)) { const l = likeCounts(p); for (const c of CAT_IDS) if (l[c]) db[c][p.id] = l[c]; }
   return db;
-}
-function tallyAccuracy(room, g) {
-  const truth = truthDb(room);
-  let cells = 0, ok = 0;
-  for (const c of g.cats) {
-    const ids = new Set([...Object.keys(truth[c]), ...Object.keys(g.tally[c] || {})]);
-    for (const id of ids) { cells++; if ((truth[c][id] || 0) === (g.tally[c]?.[id] || 0)) ok++; }
-  }
-  return cells ? ok / cells : 1;
 }
 
 // Algorithmus: nutzt Likes UND verdeckte Signale, wählt die besten Treffer im Budget
@@ -389,17 +374,6 @@ export const actions = {
     for (const k of ['dwell_ms', 'read_ms', 'opens']) if (!Object.keys(body[k]).length) delete body[k];
     logTrack(p, 'POST /track', body);
   },
-  tally(room, p, { cat, id, count }) {
-    const g = groupOf(room, p);
-    if (room.phase !== 'auswertung' || !g || g.tallyDone || !g.cats.includes(cat)) return;
-    if (!validPid(room, id)) return;
-    const v = clamp(Math.round(count) || 0, 0, room.settings.maxLikes);
-    if (v) g.tally[cat][id] = v; else delete g.tally[cat][id];
-  },
-  tallyDone(room, p, { done }) {
-    const g = groupOf(room, p);
-    if (room.phase === 'auswertung' && g) g.tallyDone = !!done;
-  },
   adCats(room, p, { adId, cat }) {
     const g = groupOf(room, p); const w = room.adWork[adId];
     if (room.phase !== 'werbung' || !g?.ads.includes(adId) || !w || w.done || !CAT[cat]) return;
@@ -490,7 +464,6 @@ export const actions = {
     room.players[id].kicked = true;
     // aus Zielgruppen und Auswertungstabellen entfernen, damit kein Budget blockiert bleibt
     for (const w of Object.values(room.adWork || {})) w.targets = w.targets.filter((x) => x !== id);
-    for (const gr of room.groups || []) for (const c of Object.keys(gr.tally || {})) delete gr.tally[c][id];
   },
   settings(room, _p, s) {
     if (Number.isFinite(s.maxLikes)) room.settings.maxLikes = clamp(Math.round(s.maxLikes), 1, 22);
@@ -501,14 +474,10 @@ export const actions = {
       if (!activePhases(room).find((x) => x.id === room.phase)) room.phase = 'reflexion';
     }
   },
-  autoTally(room) {
-    if (!room.groups) formGroups(room);
-    const truth = truthDb(room);
-    for (const g of room.groups) { for (const c of g.cats) g.tally[c] = { ...truth[c] }; g.tallyDone = true; }
-  },
+  replayDb(room) { room.dbReplay = (room.dbReplay || 0) + 1; },
   autoAds(room) {
     if (!room.groups) formGroups(room);
-    const db = groupDb(room); const budget = budgetOf(room);
+    const db = likeDb(room); const budget = budgetOf(room);
     for (const ad of ADS) {
       const w = room.adWork[ad.id];
       if (w.done) continue;
@@ -533,7 +502,7 @@ export const actions = {
     room.werkbankTest = false; room.fairRule = false; actions.quizReset(room);
   },
 };
-export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'autoTally', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData',
+export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'replayDb', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData',
   'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset']);
 
 function logTrack(p, req, body) {
@@ -549,7 +518,7 @@ function progress(room, ps) {
   switch (room.phase) {
     case 'lobby': return { done: n, total: n, label: 'angemeldet' };
     case 'feed': return { done: ps.filter((p) => p.feedDone || p.likes.length >= room.settings.maxLikes).length, total: n, label: 'fertig mit Liken' };
-    case 'auswertung': return { done: (room.groups || []).filter((g) => g.tallyDone).length, total: (room.groups || []).length, label: 'Gruppen fertig' };
+    case 'auswertung': return { done: n, total: n, label: 'Profile automatisch erstellt' };
     case 'werbung': return { done: ADS.filter((a) => room.adWork[a.id]?.done).length, total: ADS.length, label: 'Anzeigen geschaltet' };
     case 'empfang': return { done: ps.filter((p) => ADS.every((a) => p.ratings[a.id] != null)).length, total: n, label: 'haben alles bewertet' };
     case 'profil': return { done: ps.filter((p) => Object.keys(p.inferFb).length >= 3).length, total: n, label: 'haben ihr Profil geprüft' };
@@ -611,14 +580,17 @@ export function staffView(room, { forBeamer = false } = {}) {
     players, postLikes,
     totals: { likes: ps.reduce((a, p) => a + p.likes.length, 0) },
     groups: (room.groups || []).map((g) => ({
-      id: g.id, cats: g.cats, ads: g.ads, tallyDone: g.tallyDone,
+      id: g.id, cats: g.cats, ads: g.ads,
       members: ps.filter((p) => p.group === g.id).map((p) => p.id),
-      accuracy: g.tallyDone ? tallyAccuracy(room, g) : null,
-      filled: g.cats.reduce((a, c) => a + Object.keys(g.tally[c] || {}).length, 0),
     })),
     voteRevealed: room.voteRevealed,
   };
-  if (at('auswertung')) { v.db = groupDb(room); v.truth = truthDb(room); }
+  if (at('auswertung')) {
+    v.db = likeDb(room);
+    v.dbReplay = room.dbReplay || 0;
+    // Rohdaten-Ereignisse für die Live-Entstehung auf dem Beamer (in Like-Reihenfolge je Person)
+    v.likeEvents = ps.flatMap((p) => p.likes.filter((id) => POST[id]).map((id) => [p.id, id]));
+  }
   if (at('werbung')) {
     v.adWork = room.adWork;
     v.human = human;
@@ -708,19 +680,19 @@ export function playerView(room, p) {
     me: { id: p.id, avatar: p.avatar, group: p.group, likes: p.likes, feedDone: p.feedDone },
   };
   if (phase === 'feed' || phase === 'lobby') v.feed = feedOrder(p.id);
-  if (g && ['auswertung', 'werbung'].includes(phase)) {
+  if (g && phase === 'werbung') {
     const members = playersOf(room).filter((q) => q.group === g.id).map((q) => ({ id: q.id, avatar: q.avatar, online: !!q.online }));
-    v.group = { id: g.id, cats: g.cats, ads: g.ads, members, tallyDone: g.tallyDone };
+    v.group = { id: g.id, cats: g.cats, ads: g.ads, members };
   }
-  if (phase === 'auswertung' && g) {
-    const postLikes = {};
-    for (const q of playersOf(room)) for (const id of q.likes) if (g.cats.includes(POST[id]?.cat)) (postLikes[id] ||= []).push(q.id);
-    v.group.postLikes = postLikes;
-    v.group.tally = Object.fromEntries(g.cats.map((c) => [c, g.tally[c] || {}]));
-    v.ids = playersOf(room).map((q) => q.id);
+  if (phase === 'auswertung') {
+    // Die eigene Zeile der automatisch erstellten Datenbank
+    const counts = likeCounts(p);
+    const top = topCat(counts);
+    const ps = playersOf(room);
+    v.dbRow = { counts, top, sameTop: top ? ps.filter((q) => topCat(likeCounts(q)) === top).length : 0, players: ps.length, rows: ps.length * CAT_IDS.length };
   }
   if (phase === 'werbung' && g) {
-    v.db = groupDb(room);
+    v.db = likeDb(room);
     v.ids = playersOf(room).map((q) => q.id);
     v.budget = budgetOf(room);
     v.adWork = Object.fromEntries(g.ads.map((a) => [a, room.adWork[a]]));

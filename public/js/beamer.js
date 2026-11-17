@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
+  html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
@@ -71,32 +71,67 @@ function Feed({ v }) {
   </div>`;
 }
 
-function Heatmap({ v, showTruthDiff }) {
+// Tabelle „Likes je Person und Kategorie“ – db: { kategorie: { id: anzahl } }
+function Heatmap({ v, db, tops }) {
   const ids = v.players.map((p) => p.id);
-  const maxN = Math.max(1, ...CATEGORIES.flatMap((c) => Object.values(v.db?.[c.id] || {})));
+  const maxN = Math.max(1, ...CATEGORIES.flatMap((c) => Object.values(db[c.id] || {})));
   return html`<div class="heatmap" style=${`--cols:${ids.length}`}>
-    <div class="hm-row head"><span></span>${ids.map((id) => html`<span class="hm-id">${id}</span>`)}</div>
-    ${CATEGORIES.map((c) => {
-      const g = v.groups.find((x) => x.cats.includes(c.id));
-      return html`<div class="hm-row" style=${`--c:${c.color}`}>
-        <span class="hm-cat">${g && html`<${GroupBadge} gid=${g.id} />`}<span>${c.icon} ${c.name}</span></span>
-        ${ids.map((id) => { const n = v.db?.[c.id]?.[id] || 0; const t = v.truth?.[c.id]?.[id] || 0; const wrong = showTruthDiff && g?.tallyDone && n !== t;
-          return html`<span class=${`hm-cell ${n ? 'has' : ''} ${wrong ? 'wrong' : ''}`} style=${`--k:${n / maxN}`} title=${`ID ${id} · ${c.name}: ${n}`}>${n || ''}</span>`; })}
-      </div>`;
-    })}
+    <div class="hm-row head"><span class="hm-corner">Kategorie ↓ · ID →</span>${ids.map((id) => html`<span class="hm-id">${id}</span>`)}</div>
+    ${CATEGORIES.map((c) => html`<div class="hm-row" style=${`--c:${c.color}`}>
+      <span class="hm-cat"><span>${c.icon} ${c.name}</span></span>
+      ${ids.map((id) => { const n = db[c.id]?.[id] || 0; const top = tops && tops[id] === c.id;
+        return html`<span class=${`hm-cell ${n ? 'has' : ''} ${top ? 'top' : ''}`} style=${`--k:${n / maxN}`} title=${`ID ${id} · ${c.name}: ${n}`} key=${`${c.id}-${id}-${n}`}>${n || ''}</span>`; })}
+    </div>`)}
+    ${tops && html`<div class="hm-row foot"><span class="hm-cat"><b>Hauptinteresse</b></span>${ids.map((id) => html`<span class="hm-top">${tops[id] ? CAT[tops[id]].icon : '·'}</span>`)}</div>`}
   </div>`;
 }
 
+const shortHead = (t) => (t.length > 34 ? `${t.slice(0, 32)}…` : t);
 function Auswertung({ v }) {
+  const events = v.likeEvents || [];
+  const [k, setK] = useState(0);
+  const lenRef = useRef(0); lenRef.current = events.length;
+  // Live-Entstehung: Like für Like in die Tabelle übernehmen (8–20 s), neu startbar über das Cockpit
+  useEffect(() => {
+    setK(0);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setK(Number.MAX_SAFE_INTEGER); return; }
+    const dur = Math.min(20000, Math.max(8000, events.length * 90));
+    const stepMs = Math.max(30, dur / Math.max(1, events.length));
+    const t = setInterval(() => setK((x) => (x >= lenRef.current ? x : x + 1)), stepMs);
+    return () => clearInterval(t);
+  }, [v.dbReplay]);
+  const shown = Math.min(k, events.length);
+  const done = shown >= events.length && events.length > 0;
+  const db = useMemo(() => {
+    const d = Object.fromEntries(CATEGORIES.map((c) => [c.id, {}]));
+    for (const [id, postId] of events.slice(0, shown)) { const c = POST[postId]?.cat; if (c) d[c][id] = (d[c][id] || 0) + 1; }
+    return d;
+  }, [shown, events.length]);
+  const tops = done ? Object.fromEntries(v.players.map((p) => {
+    let best = null; for (const c of CATEGORIES) { const n = db[c.id][p.id] || 0; if (n && (!best || n > (db[best][p.id] || 0))) best = c.id; }
+    return [p.id, best];
+  })) : null;
+  const recent = events.slice(Math.max(0, shown - 7), shown).reverse();
   return html`<div class="stack">
-    <div class="glass stage-card grow">
-      <div class="card-head"><h3>📊 Unsere Interessen-Datenbank</h3><span class="muted">wird live von den Gruppen befüllt</span></div>
-      <${Heatmap} v=${v} showTruthDiff />
+    <div class="split db-split">
+      <div class="glass stage-card">
+        <div class="card-head"><h3>❤️ Rohdaten</h3><span class="metric"><b><${CountUp} value=${shown} /></b> / ${events.length} Likes</span></div>
+        <p class="muted db-note">Jeder Like wird gespeichert: <b>wer</b> (ID) hat <b>was</b> (Beitrag) geliked – der Beitrag gehört zu einer Kategorie.</p>
+        <div class="event-log">${recent.map(([id, postId], i) => { const post = POST[postId]; return html`<div class=${`ev ${i === 0 ? 'new' : ''}`} key=${`${id}-${postId}`}>
+          <b class="ev-id">#${id}</b><span class="ev-like">❤️</span><span class="ev-post">„${shortHead(post?.headline || postId)}“</span><span class="ev-arrow">→</span><span class="ev-cat" style=${`--c:${CAT[post?.cat]?.color}`}>${CAT[post?.cat]?.icon} ${CAT[post?.cat]?.name}</span>
+        </div>`; })}
+        ${!events.length && html`<p class="muted">Noch keine Likes vorhanden.</p>`}</div>
+      </div>
+      <div class="glass stage-card grow">
+        <div class="card-head"><h3>📊 Datenbank: Likes je Person und Kategorie</h3><span class="muted">${done ? `fertig · ${v.players.length * CATEGORIES.length} Felder` : 'entsteht automatisch …'}</span></div>
+        <${Heatmap} v=${v} db=${db} tops=${tops} />
+      </div>
     </div>
-    <div class="group-strip">${v.groups.map((g) => html`<div class=${`group-card glass ${g.tallyDone ? 'done' : ''}`} style=${`--g:${groupColor(g.id)}`}>
-      <div class="bb-row"><${GroupBadge} gid=${g.id} />${g.tallyDone ? html`<span class="status-pill ok">✓ ${pct(g.accuracy)} korrekt</span>` : html`<span class="status-pill warn">${g.filled} Einträge</span>`}</div>
-      <div class="bb-row gap">${g.cats.map((c) => html`<span title=${CAT[c].name} class="cat-ico">${CAT[c].icon}</span>`)}<span class="members-mini">${g.members.map((id) => html`<i>${v.players.find((p) => p.id === id)?.avatar}</i>`)}</span></div>
-    </div>`)}</div>
+    ${done && html`<div class="questions-strip">
+      <div class="glass q-card"><span>🤔</span><b>Was weiß bubbl jetzt über jede/n von euch?</b></div>
+      <div class="glass q-card"><span>🎯</span><b>Wer sollte Werbung für Laufschuhe bekommen – und wer nicht?</b></div>
+      <div class="glass q-card"><span>🕵️</span><b>Was fehlt in der Tabelle? Tipp: alles, was ihr <u>nicht</u> geliked habt …</b></div>
+    </div>`}
   </div>`;
 }
 

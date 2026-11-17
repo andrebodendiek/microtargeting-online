@@ -13,7 +13,7 @@ const joinUrl = `${location.origin}/?c=${code}`;
 const HINTS = {
   lobby: 'Beamer-Fenster öffnen und auf den Projektor ziehen (Doppelklick = Vollbild). Die SuS scannen den QR-Code. Wer neu lädt, landet automatisch wieder im eigenen Profil.',
   feed: 'Nicht verraten: bubbl misst ab jetzt heimlich Verweildauer, geöffnete Artikel und Scrollen. Erst im Schritt „Dein Datenprofil“ wird das aufgedeckt. Ca. 5–7 Minuten.',
-  auswertung: 'Entspricht der Office-Tabelle aus dem Original: Jede Gruppe zählt die Likes ihrer Kategorie aus. Fehler werden auf dem Beamer nach Abgabe rot gestrichelt markiert – guter Gesprächsanlass. Zeitnot? „Automatisch ausfüllen“.',
+  auswertung: 'Plenumsphase (ca. 5 Min.): Der Beamer zeigt, wie aus jedem Like automatisch ein Eintrag in der Datenbank wird – im Original die Office-Tabelle, die die Gruppen von Hand füllten. Jede/r sieht auf dem Handy die eigene Zeile. Impulse: Was weiß bubbl jetzt? Wer bekommt welche Werbung? Was fehlt (→ Tracking später)? Danach direkt weiter zu „Werbung platzieren“ – die Gruppen werden dafür automatisch gebildet.',
   werbung: 'Jede Gruppe platziert eine Anzeige mit begrenztem Budget. Parallel targetet der bubbl-Algorithmus dieselben Anzeigen – mit Likes UND Tracking-Daten. Die Ergebnisse werden im nächsten Schritt verglichen.',
   empfang: 'Die SuS bewerten alle Anzeigen (auch die nicht erhaltenen). Daraus ergibt sich Trefferquote (Präzision) und Reichweite für Mensch und Algorithmus. Frage: Warum ist der Algorithmus (meist) besser?',
   profil: 'Aufdeckung: Likes vs. heimlich gemessene Signale. Fragen: Was verrät Verweildauer? Sind die „Vermutungen“ fair? Woher kennen Plattformen Alter, Kaufkraft, politische Haltung?',
@@ -48,8 +48,8 @@ function Tools({ v, act, sock }) {
     <h3><i class="bi bi-tools"></i> Werkzeuge für „${PHASE[ph].title}“</h3>
     <p class="hint">${HINTS[ph]}</p>
     <div class="bb-row gap wrap">
-      ${['auswertung', 'werbung'].includes(ph) && html`<button class="btn btn-sm" onClick=${() => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup')}><i class="bi bi-shuffle"></i> Gruppen neu bilden</button>`}
-      ${ph === 'auswertung' && html`<button class="btn btn-sm" onClick=${() => confirm('Alle Tabellen mit den echten Like-Zahlen ausfüllen und abgeben?') && act('autoTally')}>⚡ Auswertung automatisch ausfüllen</button>`}
+      ${ph === 'auswertung' && html`<button class="btn btn-primary" onClick=${() => act('replayDb')}><i class="bi bi-play-circle"></i> Entstehung erneut abspielen</button>`}
+      ${ph === 'werbung' && html`<button class="btn btn-sm" onClick=${() => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup')}><i class="bi bi-shuffle"></i> Gruppen neu bilden</button>`}
       ${ph === 'werbung' && html`<button class="btn btn-sm" onClick=${() => confirm('Nicht geschaltete Anzeigen automatisch (nach Datenbank) schalten?') && act('autoAds')}>⚡ Restliche Anzeigen automatisch schalten</button>`}
       ${ph === 'lobby' && html`<button class="btn btn-sm" onClick=${() => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error))}><i class="bi bi-box-arrow-in-down"></i> Neueste Inhalte aus dem Editor übernehmen</button><a class="btn btn-sm" href="/editor" target="bubbl-editor"><i class="bi bi-pencil-square"></i> Inhalts-Editor</a>`}
       ${ph === 'werkbank' && html`<button class=${`btn ${v.werkbank?.test ? '' : 'btn-primary'}`} onClick=${() => act('werkbankTest', { value: !v.werkbank?.test })}>${v.werkbank?.test ? html`<i class="bi bi-eye-slash"></i> Testdaten verbergen` : html`<i class="bi bi-clipboard-data"></i> Testdaten aufdecken`}</button>`}

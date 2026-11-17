@@ -291,3 +291,24 @@ body { overflow: hidden; }
 .qr-overlay { position: fixed; inset: 0; z-index: 95; background: rgba(45, 49, 51, 0.55); display: grid; place-items: center; animation: fade 0.2s; cursor: pointer; }
 .qr-card { padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
 .qr-card .joinbox.big img { width: 32rem; height: 32rem; }
+
+/* Datenbank entsteht (Schritt 3) */
+.db-split { grid-template-columns: 1fr 2fr; flex: 1; }
+.db-note { font-size: 1.05rem; margin: 0; }
+.event-log { display: flex; flex-direction: column; gap: 0.45rem; overflow: hidden; }
+.ev { display: grid; grid-template-columns: 3rem 1.6rem 1fr auto auto; gap: 0.5rem; align-items: center; padding: 0.55rem 0.75rem; border-radius: 0.6rem; background: var(--field); font-size: 1.02rem; }
+.ev.new { animation: evIn 0.35s cubic-bezier(.2,.9,.3,1.2); background: rgba(31, 176, 199, 0.12); }
+@keyframes evIn { from { opacity: 0; transform: translateX(-12px); } }
+.ev-id { font-weight: 800; }
+.ev-post { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.ev-arrow { color: var(--faint); }
+.ev-cat { font-weight: 700; color: var(--c); white-space: nowrap; }
+.hm-corner { font-size: 0.75rem; color: var(--faint); text-align: left; font-weight: 600; }
+.hm-cell.has { animation: cellPop 0.35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes cellPop { from { transform: scale(0.6); } }
+.hm-cell.top { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c); }
+.hm-row.foot { margin-top: 0.3rem; }
+.hm-top { text-align: center; font-size: 1.35rem; }
+.questions-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; animation: rise 0.5s both; }
+.q-card { padding: 1rem 1.2rem; display: flex; gap: 0.8rem; align-items: center; font-size: 1.25rem; }
+.q-card span { font-size: 2rem; }

@@ -187,7 +187,7 @@ export function Stepper({ phases, phase, progress, onPick }) {
       const inner = html`<span class="step-icon">${st === 'done' ? '✓' : PHASE[id].icon}</span>
         <span class="step-text"><small>Schritt ${i + 1}</small><b>${PHASE[id].title}</b></span>
         <span class="step-bar"><i style=${`width:${pct}%`}></i></span>`;
-      return html`<li class=${`step ${st}`} key=${id}>${onPick ? html`<button type="button" onClick=${() => onPick(id)}>${inner}</button>` : inner}</li>`;
+      return html`<li class=${`step ${st}`} key=${id} title=${`Schritt ${i + 1}: ${PHASE[id].title}`} aria-label=${`Schritt ${i + 1}: ${PHASE[id].title}${st === 'now' ? ' (aktuell)' : st === 'done' ? ' (erledigt)' : ''}`}>${onPick ? html`<button type="button" onClick=${() => onPick(id)}>${inner}</button>` : inner}</li>`;
     })}
   </ol>`;
 }
