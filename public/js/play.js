@@ -3,6 +3,7 @@ import {
   PostArt, PageHead, AdVisual, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, AVATARS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
+import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
 
 const code = (qs.get('c') || '').toUpperCase();
 const tokenKey = `bubbl:token:${code}`;
@@ -330,6 +331,8 @@ function Profil({ v, act }) {
         </div>`; })}
       </div>
     </div>
+    <${TrackingInspector} log=${v.trackLog} />
+    <${Auskunft} code=${v.code} />
     ${pr.received.length > 0 && html`<div class="glass pad"><h3>Deshalb hast du diese Werbung bekommen</h3><div class="other-ads">${pr.received.map((id) => html`<div class="other-ad"><${AdVisual} ad=${AD[id]} compact /><div class="row wrap gap">${AD[id].cats.map((c) => html`<${CatChip} cat=${c} small />`)}</div></div>`)}</div></div>`}
   </section>`;
 }
@@ -434,14 +437,14 @@ function App() {
   if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(av) => { joinRef.current = av; sock.current?.greet(); }} />`;
   if (!v) return html`<${Aurora} /><main class="join"><${Logo} size=${46} /><div class="loader"><span class="dots"><i></i><i></i><i></i></span></div></main>`;
 
-  const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion }[v.phase] || Lobby;
+  const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: Werkbank, fairness: Fairness, quiz: Quiz }[v.phase] || Lobby;
   return html`
     <${Aurora} />
     ${status === 'offline' && html`<div class="offline-banner">Verbindung unterbrochen – verbinde neu …</div>`}
     <header class="appbar glass">
       <${Logo} size=${26} />
       <span class="spacer"></span>
-      ${v.me.group && ['auswertung', 'werbung'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
+      ${v.me.group && ['auswertung', 'werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
       <${Avatar} id=${v.me.id} avatar=${v.me.avatar} size=${38} />
     </header>
     <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} /></nav>

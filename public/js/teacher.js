@@ -3,6 +3,8 @@ import {
   CATEGORIES, CAT, PHASE,
 } from './lib.js';
 
+import { PHASES } from '/shared/content.js';
+const OPTIONAL = PHASES.filter((p) => p.optional).map((p) => p.id);
 const code = (qs.get('c') || '').toUpperCase();
 const key = location.hash.slice(1);
 const beamerUrl = `/beamer?c=${code}#${key}`;
@@ -17,6 +19,9 @@ const HINTS = {
   profil: 'Aufdeckung: Likes vs. heimlich gemessene Signale. Fragen: Was verrät Verweildauer? Sind die „Vermutungen“ fair? Woher kennen Plattformen Alter, Kaufkraft, politische Haltung?',
   blase: 'Der Feed empfiehlt jetzt nach Interesse – jeder Like verengt ihn weiter. Auf dem Beamer wandern die Avatare zu „ihrem“ Thema. Impuls: Wer schafft es, die Blase mit „Entdecken“ zu verlassen?',
   wahl: 'Jede Person bekommt die Botschaft zu ihrem Hauptinteresse – manche widersprechen sich. Erst abstimmen lassen, dann „Aufdecken“. Bezug: Cambridge Analytica, Dark Ads, DSA-Regeln zu politischer Werbung.',
+  werkbank: 'Die Gruppen stellen Gewichte für Likes und Tracking-Signale ein und sehen live Trefferquote, Reichweite und F1 – geprüft an den echten Bewertungen aus „Werbung erhalten“ (Trainingsdaten = erste 4 Anzeigen). Zum Schluss „Testdaten aufdecken“: Wer hat überangepasst (Overfitting)?',
+  fairness: 'Ein Angebot für alle (z. B. Ausbildungsplatz) wird klick-optimiert nur an die „typische“ Zielgruppe ausgespielt. Erst antworten lassen, dann diskutieren und die „Fairness-Regel“ einschalten: Wie ändert sich die Verteilung? Begriffe: Proxy-Merkmal, indirekte Diskriminierung.',
+  quiz: 'Live-Quiz zur Sicherung. „Frage starten“ → 20 s Antwortzeit → „Auflösen“ zeigt Lösung, Erklärung und Bestenliste. Fragen lassen sich im Inhalts-Editor (auch per KI) anpassen.',
   reflexion: 'Originale Reflexionsfragen aus dem Material. Notizen erscheinen anonym auf dem Beamer und können hier ausgeblendet werden. Am Ende: CSV exportieren.',
 };
 
@@ -30,12 +35,12 @@ function Settings({ v, act }) {
     ${num('groupCount', 1, 7, 'Anzahl Gruppen', 'max. 7 (eine je Kategorie)')}
     ${num('budget', 0, 60, 'Werbebudget je Anzeige', `0 = automatisch (aktuell ${v.budget})`)}
     <div class="set"><span>Erweiterungen</span>
-      <div class="row gap wrap">${['blase', 'wahl'].map((id) => html`<label class="toggle"><input type="checkbox" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} /> ${PHASE[id].icon} ${PHASE[id].title}</label>`)}</div>
+      <div class="row gap wrap">${OPTIONAL.map((id) => html`<label class="toggle"><input type="checkbox" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} /> ${PHASE[id].icon} ${PHASE[id].title}</label>`)}</div>
     </div>
   </div>`;
 }
 
-function Tools({ v, act }) {
+function Tools({ v, act, sock }) {
   const ph = v.phase;
   return html`<div class="card pad col tools">
     <h3>🧰 Werkzeuge für „${PHASE[ph].title}“</h3>
@@ -44,6 +49,13 @@ function Tools({ v, act }) {
       ${['auswertung', 'werbung'].includes(ph) && html`<button class="btn small" onClick=${() => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup')}>🔀 Gruppen neu bilden</button>`}
       ${ph === 'auswertung' && html`<button class="btn small" onClick=${() => confirm('Alle Tabellen mit den echten Like-Zahlen ausfüllen und abgeben?') && act('autoTally')}>⚡ Auswertung automatisch ausfüllen</button>`}
       ${ph === 'werbung' && html`<button class="btn small" onClick=${() => confirm('Nicht geschaltete Anzeigen automatisch (nach Datenbank) schalten?') && act('autoAds')}>⚡ Restliche Anzeigen automatisch schalten</button>`}
+      ${ph === 'lobby' && html`<button class="btn small" onClick=${() => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error))}>📦 Neueste Inhalte aus dem Editor übernehmen</button><a class="btn small" href="/editor" target="bubbl-editor">✏️ Inhalts-Editor</a>`}
+      ${ph === 'werkbank' && html`<button class=${`btn ${v.werkbank?.test ? '' : 'primary'}`} onClick=${() => act('werkbankTest', { value: !v.werkbank?.test })}>${v.werkbank?.test ? '🙈 Testdaten verbergen' : '🧪 Testdaten aufdecken'}</button>`}
+      ${ph === 'fairness' && html`<button class=${`btn ${v.fairness?.rule ? '' : 'primary'}`} onClick=${() => act('fairRule', { value: !v.fairness?.rule })}>${v.fairness?.rule ? '⚖️ Fairness-Regel ausschalten' : '⚖️ Fairness-Regel einschalten'}</button>`}
+      ${ph === 'quiz' && v.quiz && html`
+        ${v.quiz.idx < v.quiz.total && html`<button class="btn primary" disabled=${v.quiz.open} onClick=${() => act('quizNext')}>${v.quiz.idx < 0 ? '▶ Quiz starten' : v.quiz.idx === v.quiz.total - 1 ? '🏁 Siegerehrung' : '▶ Nächste Frage'}</button>`}
+        ${v.quiz.idx >= 0 && v.quiz.idx < v.quiz.total && html`<button class="btn" disabled=${!v.quiz.open} onClick=${() => act('quizReveal')}>🔍 Auflösen (${v.quiz.answered}/${v.players.length})</button>`}
+        <button class="btn small ghost" onClick=${() => confirm('Quiz zurücksetzen? Alle Antworten gehen verloren.') && act('quizReset')}>↺ Zurücksetzen</button>`}
       ${ph === 'wahl' && html`<button class=${`btn ${v.voteRevealed ? '' : 'primary'}`} onClick=${() => act('revealVote', { value: !v.voteRevealed })}>${v.voteRevealed ? '🙈 Wieder verdecken' : '🔍 Botschaften aufdecken'}</button>`}
     </div>
     ${ph === 'reflexion' && v.reflexion && html`<div class="notes-mod">${v.reflexion.notes.length ? v.reflexion.notes.map((n) => html`<label class=${`note-mod ${n.hidden ? 'hidden' : ''}`}>
@@ -123,6 +135,7 @@ function App() {
       <button class="btn small" onClick=${copy}>${copied ? '✓ Kopiert' : '🔗 SuS-Link kopieren'}</button>
       <a class="btn small primary" href=${beamerUrl} target="bubbl-beamer">📺 Beamer öffnen</a>
       <a class="btn small" href=${`/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}`}>⬇︎ CSV</a>
+      <a class="btn small" href="/editor" target="bubbl-editor">✏️ Inhalte</a>
       <button class="btn small ghost" title="Abmelden" onClick=${async () => { await teacherLogout(); location.replace('/'); }}>⎋ Abmelden</button>
     </header>
     <main class="t-main">
@@ -139,7 +152,7 @@ function App() {
       </section>
       <div class="t-grid">
         <div class="col">
-          <${Tools} v=${v} act=${act} />
+          <${Tools} v=${v} act=${act} sock=${sock} />
           <${Players} v=${v} act=${act} />
         </div>
         <div class="col">

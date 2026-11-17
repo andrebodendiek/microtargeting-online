@@ -18,3 +18,4 @@
 .how-item { display: flex; flex-direction: column; gap: 4px; padding: 10px; }
 .how-item span { font-size: 28px; }
 .foot { text-align: center; font-size: 13px; }
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; }

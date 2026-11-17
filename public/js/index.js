@@ -57,7 +57,7 @@ function App() {
               <small class="muted">Deine letzten Räume</small>
               ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
             </div>`}
-            <button class="btn small ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}>⎋ Abmelden</button>`}
+            <div class="row-btns"><a class="btn small" href="/editor">✏️ Inhalts-Editor & KI</a><button class="btn small ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}>⎋ Abmelden</button></div>`}
         </div>
       </section>
       ${err && html`<p class="error">${err}</p>`}

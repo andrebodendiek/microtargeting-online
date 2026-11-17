@@ -3,7 +3,7 @@ import { h, render } from 'preact';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
 import htm from 'htm';
 import { io } from '/socket.io/socket.io.esm.min.js';
-import { CATEGORIES, CAT, POST, AD, PAGES, PHASE, GROUP_LETTERS, GROUP_COLORS } from '/shared/content.js';
+import { CATEGORIES, CAT, POST, AD, PAGES, PHASE, GROUP_LETTERS, GROUP_COLORS, applyContent } from '/shared/content.js';
 
 export const html = htm.bind(h);
 export { h, render, useState, useEffect, useRef, useMemo, useCallback };
@@ -40,6 +40,7 @@ export function useRoom(hello, { onKicked } = {}) {
     };
     sock.on('connect', greet);
     sock.on('disconnect', () => setStatus((s) => (s === 'error' ? s : 'offline')));
+    sock.on('content', (c) => { applyContent(c); setState((s) => (s ? { ...s } : s)); });
     sock.on('state', (s) => setState(s));
     sock.on('kicked', () => { setError('Du wurdest aus dem Raum entfernt.'); setStatus('error'); onKicked?.(); });
     sock.on('roomDeleted', () => { setError('Dieser Raum wurde beendet.'); setStatus('error'); });
@@ -179,7 +180,7 @@ export const phaseTitle = (id) => PHASE[id]?.title || id;
 // Phasen-Leiste („Stories“ auf dem Handy, Stepper auf dem Beamer)
 export function Stepper({ phases, phase, progress, onPick }) {
   const idx = phases.indexOf(phase);
-  return html`<ol class="stepper">
+  return html`<ol class=${`stepper ${phases.length > 9 ? 'many' : ''}`}>
     ${phases.map((id, i) => {
       const st = i < idx ? 'done' : i === idx ? 'now' : 'next';
       const pct = st === 'now' && progress?.total ? Math.round((progress.done / progress.total) * 100) : st === 'done' ? 100 : 0;

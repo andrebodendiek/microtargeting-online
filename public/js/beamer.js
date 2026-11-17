@@ -3,6 +3,7 @@ import {
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
+import { WerkbankStage, FairnessStage, QuizStage } from './beamer-extra.js';
 
 const code = (qs.get('c') || '').toUpperCase();
 const key = location.hash.slice(1);
@@ -290,7 +291,7 @@ function Reflexion({ v }) {
   </div>`;
 }
 
-const STAGES = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion };
+const STAGES = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: WerkbankStage, fairness: FairnessStage, quiz: QuizStage };
 
 export function BeamerStage({ v }) {
   const Stage = STAGES[v.phase] || Lobby;

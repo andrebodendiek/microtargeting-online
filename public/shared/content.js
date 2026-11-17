@@ -29,7 +29,7 @@ export const PAGES = {
 
 // art: Emojis für die Bildfläche (erstes = Hauptmotiv), bg: Verlauf
 // round 1 = Original-Beiträge (Schritt 1), round 2 = zusätzliche Beiträge für die Filterblase
-export const POSTS = [
+const DEFAULT_POSTS = [
   // ---------- Mode
   { id: 'm1', cat: 'mode', page: 'styleup', round: 1, time: '2 Std.', art: ['🛍️', '💳', '✨'], bg: ['#ff9a9e', '#fecfef'],
     headline: 'Shopping-Gutschein zu gewinnen!',
@@ -216,12 +216,10 @@ export const POSTS = [
     headline: 'Veggie-Burger im Geschmackstest',
     teaser: 'Merkt man den Unterschied? Wir haben eine Klasse blind testen lassen …', body: 'Das Ergebnis überraschte selbst die Fleischfans.' },
 ];
-export const POST = Object.fromEntries(POSTS.map((p) => [p.id, p]));
-export const ROUND1 = POSTS.filter((p) => p.round === 1);
 
 // Werbeanzeigen (aus 03_Werbeanzeigen) – Marken sind fiktiv.
 // cats = vorgesehene Zielkategorien laut Originalmaterial
-export const ADS = [
+const DEFAULT_ADS = [
   { id: 'rucksack', label: 'Rucksack', brand: 'TrailPack', product: 'TrailPack 28 Rucksack', slogan: 'Stylisch in der Stadt. Robust im Wald.', price: '89,95 €', cta: 'Jetzt entdecken', art: ['🎒', '🏔️'], bg: ['#11998e', '#38ef7d'], cats: ['mode', 'natur'] },
   { id: 'laufschuh1', label: 'Laufschuh 1', brand: 'Trailrunner', product: 'Trailrunner X', slogan: 'Für jeden Weg. Auch den matschigen.', price: '119,00 €', cta: 'Jetzt shoppen', art: ['👟', '🌲'], bg: ['#56ab2f', '#a8e063'], cats: ['sport', 'natur'] },
   { id: 'laufschuh2', label: 'Laufschuh 2', brand: 'Street Sprint', product: 'Street Sprint Neon', slogan: 'Schnell. Leicht. Ein Hingucker.', price: '99,00 €', cta: 'Jetzt shoppen', art: ['👟', '⚡'], bg: ['#f857a6', '#ff5858'], cats: ['sport', 'mode'] },
@@ -230,11 +228,10 @@ export const ADS = [
   { id: 'restaurant1', label: 'Restaurant 1', brand: 'Zuckerschnute', product: 'Waffel- & Eiscafé Zuckerschnute', slogan: 'Heute: Riesenwaffel mit Schokosoße – 2 für 1!', price: 'ab 3,50 €', cta: 'Route anzeigen', art: ['🧇', '🍨'], bg: ['#f7971e', '#ffd200'], cats: ['naschen'] },
   { id: 'restaurant2', label: 'Restaurant 2', brand: 'Green Bowl', product: 'Green Bowl – Salate & Bowls', slogan: 'Frisch. Regional. Gut für dich.', price: 'ab 6,90 €', cta: 'Route anzeigen', art: ['🥗', '🥑'], bg: ['#00b09b', '#96c93d'], cats: ['ernaehrung'] },
 ];
-export const AD = Object.fromEntries(ADS.map((a) => [a.id, a]));
 
 // Wahlwerbung einer fiktiven Partei – jede Interessengruppe bekommt eine andere Botschaft.
-export const PARTY = { name: 'Partei für Morgen', short: 'PfM', logo: '🦋', color: '#7c3aed' };
-export const PARTY_MESSAGES = {
+const DEFAULT_PARTY = { name: 'Partei für Morgen', short: 'PfM', logo: '🦋', color: '#7c3aed' };
+const DEFAULT_PARTY_MESSAGES = {
   technik: { title: 'Highspeed für alle!', text: 'Wir bauen überall Rechenzentren und 5G-Masten – ohne lästige Umweltauflagen. Gigabit in jedes Kinderzimmer!', art: '📡' },
   umwelt: { title: 'Klimaschutz zuerst!', text: 'Wir verschärfen die Umweltauflagen für Industrie und Rechenzentren. Kein Projekt ohne Klimacheck!', art: '🌍' },
   sport: { title: 'Mehr Platz für Sport!', text: 'In jedem Ort ein neuer Kunstrasenplatz und eine Sporthalle – wir bauen, wo Platz ist!', art: '🏟️' },
@@ -244,11 +241,65 @@ export const PARTY_MESSAGES = {
   mode: { title: 'Shoppen, wann du willst!', text: 'Läden dürfen auch sonntags öffnen – und die Mehrwertsteuer auf Kleidung senken wir!', art: '🛍️' },
 };
 // Widersprüche, die beim Aufdecken verbunden werden
-export const CONTRADICTIONS = [
+const DEFAULT_CONTRADICTIONS = [
   ['technik', 'umwelt', 'Weniger vs. mehr Umweltauflagen'],
   ['sport', 'natur', 'Bauen vs. keine Flächen versiegeln'],
   ['naschen', 'ernaehrung', 'Keine vs. neue Zuckersteuer'],
 ];
+
+// Fairness-Szenario: ein Angebot, das ALLE betreffen kann, wird per Klick-Optimierung nur an
+// eine „typische“ Zielgruppe ausgespielt (Ersatzmerkmal / Proxy) – andere werden ausgeschlossen.
+const DEFAULT_FAIRNESS = {
+  ad: { id: 'job', label: 'Ausbildungsplatz', brand: 'NordNetz IT', product: 'Ausbildung Fachinformatiker*in', slogan: 'Programmieren, Netzwerke, Zukunft – bewirb dich jetzt!', price: 'Start: 1. August', cta: 'Jetzt bewerben', art: ['💻', '🎓'], bg: ['#2563eb', '#06b6d4'] },
+  proxyCats: ['technik'],
+  question: 'Würde dich dieser Ausbildungsplatz interessieren (jetzt oder später)?',
+  fairQuestion: 'Ist es fair, dass vor allem Gaming- und Technik-Fans diese Anzeige sehen?',
+  explain: 'Der Algorithmus zeigt die Anzeige denen, die am wahrscheinlichsten klicken – das sind laut Daten die Technik-Fans. Alle anderen erfahren nie von dem Angebot. Bei echten Plattformen wurden so z. B. Stellenanzeigen für Lkw-Fahrer fast nur Männern und für Erzieher*innen fast nur Frauen gezeigt (AlgorithmWatch, 2020).',
+};
+
+// Live-Quiz zur Sicherung (correct = Index der richtigen Antwort)
+const DEFAULT_QUIZ = [
+  { id: 'q1', q: 'Was bedeutet „Microtargeting“?', options: ['Werbung nur für sehr kleine Produkte', 'Werbung gezielt an kleine Gruppen mit ähnlichem Datenprofil ausspielen', 'Werbung, die nur auf dem Handy erscheint', 'Werbung ohne Bilder'], correct: 1, explain: 'Aus gesammelten Daten werden Profile gebildet – Anzeigen gehen nur an Personen, die zum Profil passen.' },
+  { id: 'q2', q: 'Welche Information hat bubbl über euch gesammelt, OHNE dass ihr aktiv etwas getan habt?', options: ['Eure Likes', 'Euren Avatar', 'Wie lange ihr Beiträge angesehen habt', 'Eure Nutzer-ID'], correct: 2, explain: 'Verweildauer, geöffnete Artikel und Scrollen werden heimlich gemessen (Tracking).' },
+  { id: 'q3', q: 'Warum traf der Algorithmus meist besser als die Gruppen?', options: ['Er hatte zusätzliche, versteckte Daten (Tracking)', 'Er hat geraten', 'Er kannte eure Namen', 'Die Gruppen haben absichtlich falsch gewählt'], correct: 0, explain: 'Likes sind nur ein kleiner Teil der Daten – Verweildauer und Klicks verraten viel mehr.' },
+  { id: 'q4', q: 'Was beschreibt eine „Filterblase“?', options: ['Einen Spamfilter für E-Mails', 'Einen Feed, der immer mehr vom Gleichen zeigt', 'Ein Werbeverbot', 'Eine Datenschutz-Einstellung'], correct: 1, explain: 'Empfehlungsalgorithmen zeigen, was zu bisherigen Klicks passt – andere Themen verschwinden.' },
+  { id: 'q5', q: 'Was war am Wahlwerbungs-Beispiel problematisch?', options: ['Die Partei hatte kein Logo', 'Verschiedene Gruppen bekamen sich widersprechende Versprechen', 'Die Werbung war zu lang', 'Niemand hat sie gesehen'], correct: 1, explain: 'Weil jede Person nur ihre Botschaft sieht, fallen Widersprüche nicht auf – öffentliche Debatte wird erschwert.' },
+  { id: 'q6', q: 'Welches Recht gibt dir Art. 15 DSGVO?', options: ['Recht auf kostenlose Werbung', 'Recht auf Auskunft über deine gespeicherten Daten', 'Recht auf ein eigenes Netzwerk', 'Recht auf mehr Likes'], correct: 1, explain: 'Du kannst von jedem Unternehmen eine Kopie deiner personenbezogenen Daten verlangen.' },
+  { id: 'q7', q: 'Wie nennt man ein Merkmal, das indirekt auf eine andere Eigenschaft schließen lässt (z. B. Gaming-Interesse → Geschlecht)?', options: ['Proxy-Merkmal', 'Passwort', 'Cookie', 'Hashtag'], correct: 0, explain: 'Über Proxy-Merkmale kann ein Algorithmus diskriminieren, obwohl er das Merkmal selbst nie sieht.' },
+  { id: 'q8', q: 'Was hilft am ehesten gegen ungewolltes Tracking?', options: ['Mehr Beiträge liken', 'Tracking-Cookies ablehnen und Datenschutz-Einstellungen prüfen', 'Das Handy lauter stellen', 'Öfter das Profilbild wechseln'], correct: 1, explain: 'Datensparsamkeit: Tracking ablehnen, Berechtigungen prüfen, werbefreie Alternativen nutzen.' },
+];
+
+// ------------------------------------------------------------------ Austauschbares Inhaltspaket
+// Beiträge, Anzeigen, Wahlbotschaften, Quiz und Fairness-Szenario sind editierbar (Inhalts-Editor/KI).
+// Die exportierten Objekte werden mit applyContent() an Ort und Stelle ersetzt – alle Importe
+// sehen dadurch sofort das Paket des aktuellen Raums.
+export const DEFAULT_CONTENT = Object.freeze({
+  posts: DEFAULT_POSTS, ads: DEFAULT_ADS, party: DEFAULT_PARTY, partyMessages: DEFAULT_PARTY_MESSAGES,
+  contradictions: DEFAULT_CONTRADICTIONS, quiz: DEFAULT_QUIZ, fairness: DEFAULT_FAIRNESS,
+});
+export const POSTS = [];
+export const POST = {};
+export const ROUND1 = [];
+export const ADS = [];
+export const AD = {};
+export const PARTY = {};
+export const PARTY_MESSAGES = {};
+export const CONTRADICTIONS = [];
+export const QUIZ = [];
+export const FAIRNESS = {};
+const refill = (arr, items) => { arr.length = 0; arr.push(...items); };
+const reset = (obj, data) => { for (const k of Object.keys(obj)) delete obj[k]; Object.assign(obj, data); };
+let applied = null;
+export function applyContent(c = DEFAULT_CONTENT) {
+  if (c === applied) return;
+  applied = c;
+  refill(POSTS, c.posts); reset(POST, Object.fromEntries(c.posts.map((p) => [p.id, p])));
+  refill(ROUND1, c.posts.filter((p) => p.round === 1));
+  refill(ADS, c.ads); reset(AD, Object.fromEntries(c.ads.map((a) => [a.id, a])));
+  reset(PARTY, c.party); reset(PARTY_MESSAGES, c.partyMessages); refill(CONTRADICTIONS, c.contradictions);
+  refill(QUIZ, c.quiz); reset(FAIRNESS, c.fairness);
+}
+applyContent(DEFAULT_CONTENT);
 
 // Phasen des Spiels. optional = kann von der Lehrkraft abgeschaltet werden.
 export const PHASES = [
@@ -262,14 +313,20 @@ export const PHASES = [
     task: ['Seht euch eure Werbeanzeige an: Zu welchen Kategorien passt sie?', 'Wählt mit Hilfe der Datenbank die IDs aus, die die Anzeige sehen sollen.', 'Achtung: Euer Werbebudget ist begrenzt!'] },
   { id: 'empfang', title: 'Werbung erhalten', icon: '📬', optional: false, mode: 'EA',
     task: ['Sieh dir die Werbung an, die du bekommen hast.', 'Bewerte jede Anzeige: Passt sie zu dir?', 'Bewerte auch die Anzeigen, die du nicht bekommen hast.'] },
+  { id: 'werkbank', title: 'Algorithmus-Werkbank', icon: '🛠️', optional: true, mode: 'GA',
+    task: ['Baut euren eigenen Targeting-Algorithmus: Wie stark zählt welches Signal?', 'Beobachtet live Trefferquote und Reichweite – geprüft an euren echten Bewertungen.', 'Schlagt den bubbl-Algorithmus! Aber Vorsicht vor Überanpassung.'] },
   { id: 'profil', title: 'Dein Datenprofil', icon: '🕵️', optional: false, mode: 'EA',
     task: ['Sieh dir an, was bubbl über dich weiß.', 'Prüfe die Vermutungen: Stimmen sie?', 'Was hat bubbl gemessen, ohne dass du es gemerkt hast?'] },
+  { id: 'fairness', title: 'Fairness-Check', icon: '⚖️', optional: true, mode: 'EA',
+    task: ['Ein Angebot wurde vom Algorithmus ausgespielt – hast du es gesehen?', 'Sag ehrlich, ob es dich interessiert hätte.', 'Ist diese Auswahl fair?'] },
   { id: 'blase', title: 'Filterblase', icon: '🫧', optional: true, mode: 'EA',
     task: ['Dein Feed passt sich jetzt an dich an.', 'Like weiter, was dich interessiert, und lade mehr Beiträge.', 'Beobachte: Wie verändert sich dein Feed?'] },
   { id: 'wahl', title: 'Wahlwerbung', icon: '🗳️', optional: true, mode: 'EA',
     task: ['Die „Partei für Morgen“ hat dir eine Botschaft geschickt.', 'Wie sympathisch findest du die Partei?', 'Vergleicht danach: Haben alle dieselbe Botschaft bekommen?'] },
   { id: 'reflexion', title: 'Reflexion', icon: '💭', optional: false, mode: 'Plenum',
     task: ['Nimm Stellung zu personalisierter Werbung („Microtargeting“).', 'Was sind Vor- und Nachteile?', 'Wo könnten Schwierigkeiten auftreten?'] },
+  { id: 'quiz', title: 'Live-Quiz', icon: '🏆', optional: true, mode: 'EA',
+    task: ['Beantworte die Fragen auf deinem Handy.', 'Schnelle richtige Antworten bringen mehr Punkte.', 'Die Auflösung erscheint auf dem Beamer.'] },
 ];
 export const PHASE = Object.fromEntries(PHASES.map((p) => [p.id, p]));
 

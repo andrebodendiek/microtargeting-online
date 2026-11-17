@@ -47,6 +47,11 @@ class Bot {
       }
       if (Math.random() < 0.25) this.act('more', { explore: true });
     }
+    if (ph === 'fairness') {
+      this.act('fairAnswer', { key: 'interest', value: Math.random() < 0.55 });
+      await sleep(300);
+      this.act('fairAnswer', { key: 'fair', value: Math.random() < 0.3 });
+    }
     if (ph === 'wahl') this.act('vote', { score: 1 + Math.floor(Math.random() * 5) });
     if (ph === 'reflexion') {
       const pros = ['Ich sehe Werbung, die mich interessiert', 'Weniger nervige Werbung', 'Firmen sparen Geld', 'Man entdeckt passende Produkte'];
@@ -61,6 +66,14 @@ await Promise.all(bots.map((b) => b.ready));
 console.log(`${N} Bots im Raum ${code}.`);
 // Profil-Rückmeldungen und Gruppenarbeit über eigene Listener
 for (const b of bots) b.s.on('state', async (st) => {
+  if (st.phase === 'quiz' && st.quiz?.open && st.quiz.mine == null && b.qa !== st.quiz.idx) {
+    b.qa = st.quiz.idx; await sleep(1500 + Math.random() * 6000);
+    b.act('quizAnswer', { idx: st.quiz.idx, a: Math.random() < 0.6 ? 1 : Math.floor(Math.random() * 4) });
+  }
+  if (st.phase === 'werkbank' && st.group && !b.wb && st.group.members[0]?.id === b.id) {
+    b.wb = true; await sleep(800);
+    for (let k = 0; k < 3; k++) { b.act('weights', { weights: { like: 1 + Math.round(Math.random() * 6) / 2, dwell: Math.round(Math.random() * 8) / 2, open: Math.round(Math.random() * 4) / 2, read: Math.round(Math.random() * 4) / 2, threshold: 0 } }); await sleep(700); }
+  }
   if (st.phase === 'profil' && st.profile && !b.inf) { b.inf = true; for (const i of st.profile.inferences) b.act('infer', { key: i.key, value: Math.random() < 0.55 }); }
   if (st.phase === 'auswertung' && st.group && !b.tal && st.group.members[0]?.id === b.id) {
     b.tal = true; await sleep(800);

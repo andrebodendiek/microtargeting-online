@@ -87,6 +87,6 @@ test('Filterblase, Wahl und Reflexion', () => {
 
 test('Optionale Phasen lassen sich abschalten', () => {
   const { r } = room(1);
-  G.actions.settings(r, null, { enabled: { blase: false, wahl: false } });
+  G.actions.settings(r, null, { enabled: { blase: false, wahl: false, werkbank: false, fairness: false, quiz: false } });
   assert.deepEqual(G.activePhases(r).map((p) => p.id), ['lobby', 'feed', 'auswertung', 'werbung', 'empfang', 'profil', 'reflexion']);
 });

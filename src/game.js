@@ -2,8 +2,20 @@
 import crypto from 'node:crypto';
 import {
   CATEGORIES, CAT, POSTS, POST, ROUND1, ADS, AD, PHASES, AVATARS, GROUP_LETTERS,
-  PARTY_MESSAGES, INFERENCES,
+  PARTY_MESSAGES, INFERENCES, QUIZ, FAIRNESS, applyContent, DEFAULT_CONTENT,
 } from '../public/shared/content.js';
+
+export const OPTIONAL_PHASES = PHASES.filter((p) => p.optional).map((p) => p.id);
+
+// Inhaltspaket des Raums aktivieren. Alle Aktionen und Ansichten laufen synchron,
+// daher genügt es, das Paket vor jedem Zugriff auf einen Raum einzusetzen.
+export function useContent(room) {
+  applyContent(room?.content || DEFAULT_CONTENT);
+  if (room && !room.quiz) { // ältere gespeicherte Räume ergänzen
+    room.quiz = { idx: -1, open: false, revealed: false, startedAt: 0, answers: {} };
+    room.werkbankTest ??= false; room.fairRule ??= false;
+  }
+}
 
 const CAT_IDS = CATEGORIES.map((c) => c.id);
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -17,12 +29,13 @@ export function newCode(exists) {
   }
 }
 
-export function createRoom(code) {
+export function createRoom(code, content = null) {
   const now = Date.now();
   return {
     code, key: rid(18), createdAt: now, updatedAt: now,
+    content: content ? JSON.parse(JSON.stringify(content)) : null,
     phase: 'lobby',
-    enabled: { blase: true, wahl: true },
+    enabled: Object.fromEntries(OPTIONAL_PHASES.map((id) => [id, true])),
     settings: { maxLikes: 10, budget: 0, groupCount: 7 },
     nextId: 1,
     players: {},
@@ -30,14 +43,17 @@ export function createRoom(code) {
     adWork: {},
     voteRevealed: false,
     hiddenNotes: {},
-    log: [],
+    werkbankTest: false,
+    fairRule: false,
+    quiz: { idx: -1, open: false, revealed: false, startedAt: 0, answers: {} },
   };
 }
+export const QUIZ_SECONDS = 20;
 
 // ---------------------------------------------------------------- Hilfen
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const playersOf = (room) => Object.values(room.players).filter((p) => !p.kicked).sort((a, b) => a.id - b.id);
-export const activePhases = (room) => PHASES.filter((p) => !p.optional || room.enabled[p.id]);
+export const activePhases = (room) => PHASES.filter((p) => !p.optional || room.enabled[p.id] !== false);
 
 function seeded(seed) {
   let s = seed >>> 0 || 1;
@@ -65,6 +81,7 @@ function newPlayer(room, avatar) {
     ratings: {}, inferFb: {},
     bubble: { feed: [], likes: [], explore: 0 },
     vote: null, reflect: { opinion: null, pro: '', con: '' },
+    trackLog: [], fair: {},
   };
   room.players[id] = p;
   if (room.groups) assignLateJoiner(room, p);
@@ -77,6 +94,7 @@ export function formGroups(room) {
   const n = clamp(Math.min(room.settings.groupCount, Math.max(1, ps.length)), 1, 7);
   const groups = Array.from({ length: n }, (_, i) => ({
     id: GROUP_LETTERS[i], cats: [], ads: [], tally: {}, tallyDone: false,
+    weights: { ...START_WEIGHTS },
   }));
   CAT_IDS.forEach((c, i) => groups[i % n].cats.push(c));
   ADS.forEach((a, i) => groups[i % n].ads.push(a.id));
@@ -91,6 +109,89 @@ function assignLateJoiner(room, p) {
   p.group = Object.entries(counts).sort((a, b) => a[1] - b[1])[0][0];
 }
 const groupOf = (room, p) => room.groups?.find((g) => g.id === p.group) || null;
+
+// ---------------------------------------------------------------- Algorithmus-Werkbank
+// Signale je Person und Kategorie: Likes, Verweildauer (je 10 s), Artikel geöffnet, Lesezeit (je 10 s)
+export const START_WEIGHTS = { like: 1, dwell: 0, open: 0, read: 0, threshold: 0 };
+export const WEIGHT_KEYS = ['like', 'dwell', 'open', 'read', 'threshold'];
+function features(p) {
+  const f = Object.fromEntries(CAT_IDS.map((c) => [c, { like: 0, dwell: 0, open: 0, read: 0 }]));
+  for (const id of p.likes) if (POST[id]) f[POST[id].cat].like++;
+  for (const post of ROUND1) {
+    const x = f[post.cat]; const t = p.track;
+    x.dwell += Math.min(30, (t.dwell[post.id] || 0) / 1000) / 10;
+    x.open += t.opens[post.id] ? 1 : 0;
+    x.read += Math.min(60, (t.read[post.id] || 0) / 1000) / 10;
+  }
+  return f;
+}
+// Trainingsdaten = erste vier Anzeigen, Testdaten = restliche (unbekannte) Anzeigen
+export const splitAds = () => ({ train: ADS.slice(0, 4).map((a) => a.id), test: ADS.slice(4).map((a) => a.id) });
+function targetsByWeights(room, w) {
+  const budget = budgetOf(room);
+  const ps = playersOf(room);
+  const feats = Object.fromEntries(ps.map((p) => [p.id, features(p)]));
+  const out = {};
+  for (const ad of ADS) {
+    out[ad.id] = ps.map((p) => {
+      let s = 0;
+      for (const c of ad.cats) { const x = feats[p.id][c]; s += w.like * x.like + w.dwell * x.dwell + w.open * x.open + w.read * x.read; }
+      return { id: p.id, s };
+    }).filter((x) => x.s > 0 && x.s > w.threshold).sort((a, b) => b.s - a.s || a.id - b.id).slice(0, budget).map((x) => x.id);
+  }
+  return out;
+}
+function scoreTargets(room, T, adIds) {
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  for (const p of playersOf(room)) for (const a of adIds) {
+    const r = p.ratings[a]; if (r == null) continue;
+    const shown = !!T[a]?.includes(p.id);
+    if (shown && r > 0) tp++; else if (shown) fp++; else if (r > 0) fn++; else tn++;
+  }
+  const precision = tp + fp ? tp / (tp + fp) : null;
+  const recall = tp + fn ? tp / (tp + fn) : null;
+  const f1 = precision && recall ? (2 * precision * recall) / (precision + recall) : (precision === 0 || recall === 0 ? 0 : null);
+  return { tp, fp, fn, tn, precision, recall, f1 };
+}
+function werkbankResult(room, w) {
+  const T = targetsByWeights(room, w); const { train, test } = splitAds();
+  return { train: scoreTargets(room, T, train), test: scoreTargets(room, T, test) };
+}
+function werkbankBaselines(room) {
+  const { train, test } = splitAds();
+  const human = humanTargets(room); const algo = algoTargets(room);
+  return {
+    human: { train: scoreTargets(room, human, train), test: scoreTargets(room, human, test) },
+    algo: { train: scoreTargets(room, algo, train), test: scoreTargets(room, algo, test) },
+  };
+}
+
+// ---------------------------------------------------------------- Fairness-Check
+function fairnessTargets(room) {
+  const budget = budgetOf(room);
+  const ps = playersOf(room);
+  const scored = ps.map((p) => { const pr = profileOf(p); return { id: p.id, s: (FAIRNESS.proxyCats || []).reduce((a, c) => a + (pr.full[c] || 0), 0), top: topCat(pr.full) || 'none' }; });
+  if (!room.fairRule) return scored.filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.id - b.id).slice(0, budget).map((x) => x.id);
+  // Fairness-Regel: Budget reihum auf alle Interessengruppen verteilen
+  const byTop = {};
+  for (const x of scored.sort((a, b) => b.s - a.s || a.id - b.id)) (byTop[x.top] ||= []).push(x.id);
+  const queues = Object.values(byTop); const out = [];
+  while (out.length < budget && queues.some((q) => q.length)) for (const q of queues) if (q.length && out.length < budget) out.push(q.shift());
+  return out;
+}
+
+// ---------------------------------------------------------------- Live-Quiz
+function quizScores(room) {
+  const scores = {};
+  for (const [qi, ans] of Object.entries(room.quiz.answers || {})) {
+    const q = QUIZ[qi]; if (!q) continue;
+    for (const [pid, a] of Object.entries(ans)) {
+      if (a.a === q.correct) scores[pid] = (scores[pid] || 0) + 500 + Math.max(0, Math.round(500 * (1 - a.ms / (QUIZ_SECONDS * 1000))));
+      else scores[pid] = scores[pid] || 0;
+    }
+  }
+  return scores;
+}
 
 // ---------------------------------------------------------------- Analyse
 // Wahre Like-Zahlen pro Kategorie
@@ -257,8 +358,8 @@ export const actions = {
     if (!POST[postId]) return;
     if (room.phase === 'feed') {
       const i = p.likes.indexOf(postId);
-      if (i >= 0) p.likes.splice(i, 1);
-      else if (p.likes.length < room.settings.maxLikes && POST[postId].round === 1) p.likes.push(postId);
+      if (i >= 0) { p.likes.splice(i, 1); logTrack(p, 'DELETE /like', { post: postId }); }
+      else if (p.likes.length < room.settings.maxLikes && POST[postId].round === 1) { p.likes.push(postId); logTrack(p, 'POST /like', { post: postId }); }
     } else if (room.phase === 'blase') {
       const i = p.bubble.likes.indexOf(postId);
       if (i >= 0) p.bubble.likes.splice(i, 1);
@@ -279,6 +380,11 @@ export const actions = {
     if (Number.isFinite(d.events)) t.events += clamp(d.events, 0, 500);
     if (Number.isFinite(d.scrollPx)) t.scrollPx += clamp(d.scrollPx, 0, 50000);
     if (Number.isFinite(d.sessionMs)) t.sessionMs += clamp(d.sessionMs, 0, 5000);
+    // Protokoll für den Tracking-Inspektor: genau das, was angekommen ist (bereinigt)
+    const clean = (m) => Object.fromEntries(Object.entries(m && typeof m === 'object' ? m : {}).filter(([k, v]) => POST[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.round(v)]));
+    const body = { dwell_ms: clean(d.dwell), read_ms: clean(d.read), opens: clean(d.opens), events: Math.round(d.events || 0), scroll_px: Math.round(d.scrollPx || 0) };
+    for (const k of ['dwell_ms', 'read_ms', 'opens']) if (!Object.keys(body[k]).length) delete body[k];
+    logTrack(p, 'POST /track', body);
   },
   tally(room, p, { cat, id, count }) {
     const g = groupOf(room, p);
@@ -333,7 +439,35 @@ export const actions = {
     if (typeof con === 'string') p.reflect.con = con.slice(0, 140);
   },
 
+  weights(room, p, { weights }) {
+    const g = groupOf(room, p);
+    if (room.phase !== 'werkbank' || !g || !weights || typeof weights !== 'object') return;
+    g.weights ||= { ...START_WEIGHTS };
+    for (const k of WEIGHT_KEYS) if (Number.isFinite(weights[k])) g.weights[k] = clamp(Math.round(weights[k] * 2) / 2, 0, 5);
+  },
+  fairAnswer(room, p, { key, value }) {
+    if (room.phase !== 'fairness' || !['interest', 'fair'].includes(key)) return;
+    if (value === true || value === false) p.fair[key] = value; else delete p.fair[key];
+  },
+  quizAnswer(room, p, { idx, a }) {
+    const q = room.quiz; const item = QUIZ[q.idx];
+    if (room.phase !== 'quiz' || !q.open || idx !== q.idx || !item || !Number.isInteger(a) || a < 0 || a >= item.options.length) return;
+    const ms = Date.now() - q.startedAt;
+    if (ms > QUIZ_SECONDS * 1000 + 1500) return;
+    const ans = (q.answers[q.idx] ||= {});
+    if (ans[p.id]) return;
+    ans[p.id] = { a, ms };
+  },
+
   // --- Lehrkraft
+  werkbankTest(room, _p, { value }) { room.werkbankTest = !!value; },
+  fairRule(room, _p, { value }) { room.fairRule = !!value; },
+  quizNext(room) {
+    if (room.quiz.idx >= QUIZ.length - 1) { room.quiz.idx = QUIZ.length; room.quiz.open = false; return; }
+    Object.assign(room.quiz, { idx: room.quiz.idx + 1, open: true, revealed: false, startedAt: Date.now() });
+  },
+  quizReveal(room) { if (room.quiz.idx >= 0) Object.assign(room.quiz, { open: false, revealed: true }); },
+  quizReset(room) { room.quiz = { idx: -1, open: false, revealed: false, startedAt: 0, answers: {} }; },
   setPhase(room, _p, { phase }) {
     const list = activePhases(room);
     if (!list.find((x) => x.id === phase)) return;
@@ -353,7 +487,7 @@ export const actions = {
     if (Number.isFinite(s.budget)) room.settings.budget = clamp(Math.round(s.budget), 0, 60);
     if (Number.isFinite(s.groupCount)) room.settings.groupCount = clamp(Math.round(s.groupCount), 1, 7);
     if (s.enabled && typeof s.enabled === 'object') {
-      for (const k of ['blase', 'wahl']) if (typeof s.enabled[k] === 'boolean') room.enabled[k] = s.enabled[k];
+      for (const k of OPTIONAL_PHASES) if (typeof s.enabled[k] === 'boolean') room.enabled[k] = s.enabled[k];
       if (!activePhases(room).find((x) => x.id === room.phase)) room.phase = 'reflexion';
     }
   },
@@ -382,12 +516,20 @@ export const actions = {
         likes: [], feedDone: false, ratings: {}, inferFb: {}, vote: null,
         track: { dwell: {}, opens: {}, read: {}, events: 0, scrollPx: 0, sessionMs: 0 },
         bubble: { feed: [], likes: [], explore: 0 }, reflect: { opinion: null, pro: '', con: '' },
+        trackLog: [], fair: {},
       });
     }
     room.groups = null; room.adWork = {}; room.voteRevealed = false; room.hiddenNotes = {}; room.phase = 'lobby';
+    room.werkbankTest = false; room.fairRule = false; actions.quizReset(room);
   },
 };
-export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'autoTally', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData']);
+export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'autoTally', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData',
+  'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset']);
+
+function logTrack(p, req, body) {
+  (p.trackLog ||= []).push({ t: Date.now(), req, body });
+  if (p.trackLog.length > 60) p.trackLog.splice(0, p.trackLog.length - 60);
+}
 
 function partyCat(p) { return topCat(profileOf(p).full) || 'mode'; }
 
@@ -403,6 +545,9 @@ function progress(room, ps) {
     case 'profil': return { done: ps.filter((p) => Object.keys(p.inferFb).length >= 3).length, total: n, label: 'haben ihr Profil geprüft' };
     case 'blase': return { done: ps.filter((p) => p.bubble.likes.length >= 3).length, total: n, label: 'haben ≥ 3 Beiträge geliked' };
     case 'wahl': return { done: ps.filter((p) => p.vote).length, total: n, label: 'haben abgestimmt' };
+    case 'werkbank': return { done: (room.groups || []).filter((g) => WEIGHT_KEYS.some((k) => (g.weights?.[k] ?? START_WEIGHTS[k]) !== START_WEIGHTS[k])).length, total: (room.groups || []).length, label: 'Gruppen experimentieren' };
+    case 'fairness': return { done: ps.filter((p) => p.fair?.interest != null && p.fair?.fair != null).length, total: n, label: 'haben geantwortet' };
+    case 'quiz': { const a = room.quiz.answers?.[room.quiz.idx] || {}; return { done: Object.keys(a).length, total: n, label: room.quiz.idx >= 0 && room.quiz.idx < QUIZ.length ? `Antworten auf Frage ${room.quiz.idx + 1}/${QUIZ.length}` : 'Quiz' }; }
     case 'reflexion': return { done: ps.filter((p) => p.reflect.opinion != null).length, total: n, label: 'haben Stellung genommen' };
     default: return { done: 0, total: n, label: '' };
   }
@@ -495,6 +640,39 @@ export function staffView(room, { forBeamer = false } = {}) {
     for (const p of ps) if (p.vote) { byCat[p.vote.cat].n++; byCat[p.vote.cat].sum += p.vote.score; }
     v.wahl = { byCat, votes: ps.filter((p) => p.vote).length };
   }
+  if (at('werkbank') && room.groups) {
+    v.werkbank = {
+      test: room.werkbankTest, split: splitAds(),
+      baselines: werkbankBaselines(room),
+      groups: room.groups.map((g) => ({ id: g.id, weights: g.weights || START_WEIGHTS, result: werkbankResult(room, g.weights || START_WEIGHTS) })),
+    };
+  }
+  if (at('fairness')) {
+    const T = new Set(fairnessTargets(room));
+    const cells = { reached: 0, excluded: 0, waste: 0, none: 0 };
+    const byCat = Object.fromEntries([...CAT_IDS, 'none'].map((c) => [c, { n: 0, saw: 0, interested: 0, excluded: 0 }]));
+    let fairYes = 0, fairNo = 0;
+    for (const p of ps) {
+      const saw = T.has(p.id); const i = p.fair?.interest; const c = topCat(profs[p.id].full) || 'none';
+      byCat[c].n++; if (saw) byCat[c].saw++;
+      if (i === true) { byCat[c].interested++; if (saw) cells.reached++; else { cells.excluded++; byCat[c].excluded++; } }
+      if (i === false) { if (saw) cells.waste++; else cells.none++; }
+      if (p.fair?.fair === true) fairYes++; if (p.fair?.fair === false) fairNo++;
+    }
+    v.fairness = { rule: room.fairRule, shown: T.size, cells, byCat, fairYes, fairNo, targets: [...T] };
+  }
+  if (at('quiz')) {
+    const q = room.quiz; const item = QUIZ[q.idx];
+    const ans = q.answers?.[q.idx] || {};
+    const counts = item ? item.options.map((_, i) => Object.values(ans).filter((a) => a.a === i).length) : [];
+    const scores = quizScores(room);
+    v.quiz = {
+      idx: q.idx, total: QUIZ.length, open: q.open, revealed: q.revealed, startedAt: q.startedAt, seconds: QUIZ_SECONDS, now: Date.now(),
+      item: item ? { q: item.q, options: item.options, correct: q.revealed ? item.correct : null, explain: q.revealed ? item.explain : null } : null,
+      counts, answered: Object.keys(ans).length,
+      leaderboard: ps.map((p) => ({ id: p.id, avatar: p.avatar, score: scores[p.id] || 0 })).sort((a, b) => b.score - a.score || a.id - b.id).slice(0, 10),
+    };
+  }
   if (at('reflexion')) {
     const hist = [0, 0, 0, 0, 0];
     const notes = [];
@@ -561,21 +739,77 @@ export function playerView(room, p) {
     }
   }
   if (phase === 'reflexion') v.reflect = p.reflect;
+  if (phase === 'profil' || phase === 'fairness' || phase === 'werkbank') v.trackLog = (p.trackLog || []).slice(-25);
+  if (phase === 'werkbank' && g) {
+    const w = g.weights || START_WEIGHTS;
+    const members = playersOf(room).filter((q) => q.group === g.id).map((q) => ({ id: q.id, avatar: q.avatar, online: !!q.online }));
+    const all = room.groups.map((x) => ({ id: x.id, f1: werkbankResult(room, x.weights || START_WEIGHTS).train.f1 })).sort((a, b) => (b.f1 ?? -1) - (a.f1 ?? -1));
+    v.group = { id: g.id, cats: g.cats, ads: g.ads, members };
+    v.werkbank = { budget: budgetOf(room), weights: w, result: werkbankResult(room, w), baselines: werkbankBaselines(room), test: room.werkbankTest, split: splitAds(), rank: all.findIndex((x) => x.id === g.id) + 1, groups: all.length };
+  }
+  if (phase === 'fairness') {
+    const saw = fairnessTargets(room).includes(p.id);
+    v.fairness = { saw, answers: p.fair || {}, rule: room.fairRule };
+  }
+  if (phase === 'quiz') {
+    const q = room.quiz; const item = QUIZ[q.idx];
+    const mine = q.answers?.[q.idx]?.[p.id];
+    const scores = quizScores(room);
+    const ranking = playersOf(room).map((x) => ({ id: x.id, s: scores[x.id] || 0 })).sort((a, b) => b.s - a.s || a.id - b.id);
+    v.quiz = {
+      idx: q.idx, total: QUIZ.length, open: q.open, revealed: q.revealed, startedAt: q.startedAt, seconds: QUIZ_SECONDS, now: Date.now(),
+      item: item ? { q: item.q, options: item.options, correct: q.revealed ? item.correct : null, explain: q.revealed ? item.explain : null } : null,
+      mine: mine ? mine.a : null, score: scores[p.id] || 0, rank: ranking.findIndex((x) => x.id === p.id) + 1, players: ranking.length,
+    };
+  }
   return v;
 }
 
 // Für einen gemischten Feed in Schritt 1: Reihenfolge pro Person zufällig, aber stabil
 export function feedOrder(id) { return shuffle(ROUND1.map((x) => x.id), seeded(id * 104729 + 7)); }
 
+// Datenauskunft nach Art. 15 DSGVO (für die eigene ID)
+export function auskunft(room, p) {
+  const prof = profileOf(p); const ts = trackingStats(p);
+  const human = humanTargets(room); const algo = algoTargets(room);
+  return {
+    titel: 'Auskunft nach Art. 15 DSGVO – bubbl (Unterrichtssimulation)',
+    erstellt_am: new Date().toISOString(),
+    verantwortlicher: 'bubbl – Microtargeting-Labor (Raum ' + room.code + ')',
+    betroffene_person: { nutzer_id: p.id, avatar: p.avatar, beigetreten: new Date(p.joinedAt).toISOString() },
+    verarbeitungszwecke: ['Personalisierte Werbung (Microtargeting)', 'Empfehlung von Beiträgen (Feed)', 'Politische Werbung'],
+    kategorien_von_daten: ['Interaktionen (Likes)', 'Nutzungsverhalten (Verweildauer, geöffnete Artikel, Lesezeit, Scrollen)', 'Abgeleitete Interessen und Vermutungen (Profiling)', 'Bewertungen und Abstimmungen'],
+    empfaenger: ['Werbekunden (Gruppen ' + (room.groups || []).map((g) => g.id).join(', ') + ')', 'bubbl-Werbealgorithmus', 'Partei für Morgen (politische Werbung)'],
+    speicherdauer: '30 Tage nach der letzten Aktivität im Raum',
+    herkunft: 'Direkt bei dir erhoben – größtenteils automatisch, ohne aktive Eingabe',
+    automatisierte_entscheidungen_profiling: {
+      hinweis: 'Art. 22 DSGVO: Aus deinem Verhalten wurde automatisch ein Interessenprofil berechnet, das bestimmt, welche Werbung du siehst.',
+      interessenprofil_nur_likes: prof.likesN, interessenprofil_mit_tracking: prof.fullN,
+      vermutungen: inferencesOf(p, prof).map((i) => i.text),
+      ausgespielte_werbung: ADS.filter((a) => human[a.id]?.includes(p.id) || algo[a.id]?.includes(p.id)).map((a) => a.product),
+    },
+    gespeicherte_daten: {
+      likes: p.likes.map((id) => POST[id]?.headline || id),
+      verweildauer_ms_je_beitrag: p.track.dwell, lesezeit_ms_je_beitrag: p.track.read, geoeffnete_artikel: p.track.opens,
+      interaktionen_gesamt: ts.events, gescrollt_px: p.track.scrollPx, datenpunkte_gesamt: ts.dataPoints,
+      werbebewertungen: p.ratings, filterblase_likes: p.bubble.likes, wahl_sympathie: p.vote?.score ?? null,
+      fairness_antworten: p.fair || {}, reflexion: p.reflect,
+      protokoll_letzte_anfragen: (p.trackLog || []).slice(-20),
+    },
+    deine_rechte: ['Berichtigung (Art. 16)', 'Löschung (Art. 17)', 'Einschränkung der Verarbeitung (Art. 18)', 'Datenübertragbarkeit (Art. 20)', 'Widerspruch gegen Profiling/Direktwerbung (Art. 21)', 'Beschwerde bei der Datenschutzaufsichtsbehörde (Art. 77)'],
+  };
+}
+
 // CSV-Export (Datenbank nach Original-Tabelle 02_Auswertung)
 export function exportCsv(room) {
   const ps = playersOf(room);
-  const head = ['ID', 'Avatar', 'Gruppe', ...CATEGORIES.map((c) => `Likes ${c.name}`), ...CATEGORIES.map((c) => `Profil ${c.name} (mit Tracking)`), 'Verweildauer s', 'Datenpunkte', ...ADS.map((a) => `Bewertung ${a.label}`), 'Wahl-Sympathie', 'Meinung (1-5)', 'Pro', 'Contra'];
+  const head = ['ID', 'Avatar', 'Gruppe', ...CATEGORIES.map((c) => `Likes ${c.name}`), ...CATEGORIES.map((c) => `Profil ${c.name} (mit Tracking)`), 'Verweildauer s', 'Datenpunkte', ...ADS.map((a) => `Bewertung ${a.label}`), 'Wahl-Sympathie', 'Meinung (1-5)', 'Pro', 'Contra', 'Fairness: interessiert', 'Fairness: fair?', 'Quiz-Punkte'];
+  const qs = quizScores(room);
   const rows = ps.map((p) => {
     const prof = profileOf(p); const ts = trackingStats(p);
     return [p.id, p.avatar, p.group || '', ...CAT_IDS.map((c) => prof.likes[c]), ...CAT_IDS.map((c) => prof.fullN[c].toFixed(2)),
       Math.round((ts.dwellMs + ts.readMs) / 1000), ts.dataPoints, ...ADS.map((a) => p.ratings[a.id] ?? ''), p.vote?.score ?? '',
-      p.reflect.opinion ?? '', p.reflect.pro, p.reflect.con];
+      p.reflect.opinion ?? '', p.reflect.pro, p.reflect.con, p.fair?.interest ?? '', p.fair?.fair ?? '', qs[p.id] ?? ''];
   });
   const esc = (x) => { const s = String(x ?? ''); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   return '﻿' + [head, ...rows].map((r) => r.map(esc).join(';')).join('\n');
