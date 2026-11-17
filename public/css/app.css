@@ -300,3 +300,17 @@ button.chip:active { transform: scale(0.96); }
 .bb-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .bb-emoji { font-size: 1.05em; }
 .btn-icon { --bs-btn-padding-x: 0.5rem; }
+
+/* ---------------------------------------------------------------- Fotos */
+.post-art.photo { background: #e9eef0; }
+.post-art.photo::after { display: none; }
+.post-art.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.post-art.small.photo { aspect-ratio: 1; }
+.ad-visual.photo { background: #1b2427; }
+.ad-visual.photo::before { z-index: 1; background: linear-gradient(90deg, rgba(10, 18, 20, 0.78) 0%, rgba(10, 18, 20, 0.35) 55%, rgba(10, 18, 20, 0.05) 100%); }
+.ad-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ad-visual.photo .ad-copy, .ad-visual.photo .ad-price { z-index: 2; }
+.ad-visual.photo .ad-copy { max-width: 70%; }
+.credit { display: block; font-size: 11.5px; color: var(--faint); margin-top: 4px; line-height: 1.3; }
+.credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(0,0,0,.2); }
+.ad-visual.photo .ad-copy span { display: none; }

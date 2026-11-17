@@ -125,8 +125,11 @@ export const CatChip = ({ cat, on, onClick, small, count }) => {
 
 export const GroupBadge = ({ gid, big }) => gid ? html`<span class=${`group-badge ${big ? 'big' : ''}`} style=${`--g:${groupColor(gid)}`}>Gruppe ${gid}</span>` : null;
 
-// Bildfläche eines Beitrags aus Verlauf + Emojis
-export const PostArt = ({ post, small }) => html`
+// Bildfläche eines Beitrags: echtes Foto, sonst Ersatzgrafik aus Verlauf + Emojis
+export const PostArt = ({ post, small }) => post.image ? html`
+  <div class=${`post-art photo ${small ? 'small' : ''}`}>
+    <img src=${post.image.src} alt=${post.image.alt || post.headline || ''} loading="lazy" decoding="async" width="960" height="600" />
+  </div>` : html`
   <div class=${`post-art ${small ? 'small' : ''}`} style=${`--a:${post.bg[0]};--b:${post.bg[1]}`}>
     <span class="art-main">${post.art[0]}</span>
     ${post.art[1] && html`<span class="art-2">${post.art[1]}</span>`}
@@ -142,9 +145,13 @@ export const PageHead = ({ post, extra }) => {
   </div>`;
 };
 
+// Quellenangabe für Fotos (Lizenzpflicht bei CC BY)
+export const Credit = ({ image, prefix = 'Foto' }) => image?.credit ? html`<small class="credit">${prefix}: ${image.credit.url ? html`<a href=${image.credit.url} target="_blank" rel="noopener noreferrer">${image.credit.creator}</a>` : image.credit.creator}${image.credit.license ? ` · ${image.credit.license}` : ''}${image.credit.source ? ` · via Openverse` : ''}</small>` : null;
+
 export const AdVisual = ({ ad, compact }) => html`
-  <div class=${`ad-visual ${compact ? 'compact' : ''}`} style=${`--a:${ad.bg[0]};--b:${ad.bg[1]}`}>
-    <span class="ad-art">${ad.art[0]}</span><span class="ad-art2">${ad.art[1]}</span>
+  <div class=${`ad-visual ${compact ? 'compact' : ''} ${ad.image ? 'photo' : ''}`} style=${`--a:${ad.bg[0]};--b:${ad.bg[1]}`}>
+    ${ad.image ? html`<img class="ad-photo" src=${ad.image.src} alt=${ad.image.alt || ad.product} loading="lazy" decoding="async" width="960" height="600" />`
+      : html`<span class="ad-art">${ad.art[0]}</span><span class="ad-art2">${ad.art[1]}</span>`}
     <div class="ad-copy"><small>${ad.brand}</small><b>${ad.product}</b>${!compact && html`<span>${ad.slogan}</span>`}</div>
     <span class="ad-price">${ad.price}</span>
   </div>`;

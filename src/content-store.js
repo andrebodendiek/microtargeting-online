@@ -33,6 +33,23 @@ const cats = (v, field, min = 1, max = 3) => {
   return out;
 };
 
+// Optionales Foto: nur eigene Pfade (Startbilder oder Mediathek), Quellenangabe bereinigt
+const IMG_SRC = /^\/(img\/content|media)\/[A-Za-z0-9_-]{1,64}\.webp$/;
+export function validateImage(img, field) {
+  if (img == null) return undefined;
+  if (typeof img !== 'object' || !IMG_SRC.test(img.src || '')) throw new Invalid(`${field}: ungültiges Bild`);
+  const c = img.credit && typeof img.credit === 'object' ? img.credit : {};
+  const url = (u) => (typeof u === 'string' && /^https?:\/\/[^\s"<>]{3,400}$/.test(u) ? u : undefined);
+  return {
+    src: img.src, alt: typeof img.alt === 'string' ? img.alt.replace(/\s+/g, ' ').trim().slice(0, 160) : '',
+    credit: {
+      creator: String(c.creator || 'unbekannt').slice(0, 80), license: String(c.license || '').slice(0, 30),
+      title: c.title ? String(c.title).slice(0, 160) : undefined, url: url(c.url), license_url: url(c.license_url),
+      source: c.source ? String(c.source).slice(0, 30) : undefined, id: typeof c.id === 'string' && /^[0-9a-f-]{36}$/.test(c.id) ? c.id : undefined,
+    },
+  };
+}
+
 export function validatePost(p, i = 0) {
   const f = `Beitrag ${p?.id || i + 1}`;
   if (!p || typeof p !== 'object') throw new Invalid(`${f}: ungültig`);
@@ -43,6 +60,7 @@ export function validatePost(p, i = 0) {
     id: p.id, cat: p.cat, page: p.page, round: p.round === 2 ? 2 : 1,
     time: str(p.time || '1 Std.', 14, `${f} Zeit`), art: emojiList(p.art, `${f} Bild`), bg: colors(p.bg, `${f} Farben`),
     headline: str(p.headline, 100, `${f} Überschrift`), teaser: str(p.teaser, 360, `${f} Anreißer`), body: str(p.body, 700, `${f} Text`),
+    image: validateImage(p.image, f),
   };
 }
 export function validateAd(a, i = 0, { withCats = true } = {}) {
@@ -53,6 +71,7 @@ export function validateAd(a, i = 0, { withCats = true } = {}) {
     id: a.id, label: str(a.label, 24, `${f} Kurzname`), brand: str(a.brand, 30, `${f} Marke`), product: str(a.product, 50, `${f} Produkt`),
     slogan: str(a.slogan, 120, `${f} Slogan`), price: str(a.price, 24, `${f} Preis`), cta: str(a.cta || 'Mehr erfahren', 24, `${f} Button`),
     art: emojiList(a.art, `${f} Bild`, 1, 2), bg: colors(a.bg, `${f} Farben`),
+    image: validateImage(a.image, f),
   };
   if (withCats) out.cats = cats(a.cats, `${f} Kategorien`);
   return out;
@@ -110,6 +129,7 @@ export function applyItems(content, items) {
       if (it.action === 'replace' && idx >= 0) {
         data.id = list[idx].id;
         if (it.kind === 'post') data.round = list[idx].round;
+        if (!data.image && list[idx].image && it.kind !== 'quiz') data.image = list[idx].image; // Foto behalten, wenn kein neues gefunden
         list[idx] = data;
       } else {
         data.id = newId(it.kind === 'post' ? 'p' : it.kind === 'ad' ? 'a' : 'q');

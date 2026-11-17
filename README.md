@@ -45,11 +45,20 @@ Unter **/editor** (Lehrkraft-Anmeldung nötig) lassen sich alle Inhalte bearbeit
 
 Datenschutz: keine Namen, keine Accounts. SuS sind nur über Nummer und Tier-Avatar erkennbar. Räume werden 30 Tage nach der letzten Änderung gelöscht.
 
+## Fotos
+- Alle Beiträge und Anzeigen haben echte Fotos aus freien Quellen über **Openverse** (nur CC0, Public Domain oder CC BY), von Hand auf Schuleignung geprüft (keine Prominenten, Marken im Vordergrund oder freizügigen Motive).
+- Die Fotos liegen auf dem eigenen Server (WebP 960×600, ohne Metadaten) – Schülergeräte laden nichts von Dritten.
+- **Bildnachweise** unter `/bildnachweise` (verlinkt auf Startseite und im Profilmenü); im Artikel und unter Anzeigen steht die Quelle.
+- **Editor:** pro Beitrag/Anzeige „Foto suchen“ (Openverse, Vorschaubilder über den eigenen Server), „Hochladen“ (Ziehen & Ablegen, automatisch zugeschnitten) oder „Entfernen“ (dann Ersatzgrafik). Eigene Uploads liegen in `DATA_DIR/media`.
+- **KI-Assistent:** Vorschläge enthalten einen Bild-Suchbegriff; beim Übernehmen wird automatisch ein passendes Foto geholt.
+- Startbilder neu laden/austauschen: `node scripts/fetch-images.mjs` (Suchbegriffe im Skript; `id=@<openverse-id>` übernimmt ein bestimmtes Foto).
+
 ## Technik
 - Node.js 22, Express, Socket.IO (Echtzeit), Preact + htm ohne Build-Schritt
 - Layout: **Bootstrap 5.3 + Bootstrap Icons** (lokal ausgeliefert, kein CDN), gestaltet nach der Design-Sprache von GrandNode (Petrol `#0C5D6A`, Türkis `#1FB0C7`) – es wird kein GrandNode-Code (GPL) verwendet
 - Schutzmaßnahmen: ein Raum pro Verbindung, Bremsen für Login (pro IP und global), Beitritte, Raumcode-Suche und Auskunft; IDs und Schlüssel werden strikt geprüft (keine Prototyp-Schlüssel), fehlerhafte Inhaltspakete fallen auf den Standard zurück, Fehler in einzelnen Ansichten bringen den Server nicht zum Absturz
-- Persistenz: ein JSON-Dokument pro Raum in `DATA_DIR/rooms` (atomar geschrieben)
+- Persistenz: ein JSON-Dokument pro Raum in `DATA_DIR/rooms` (atomar geschrieben), Mediathek in `DATA_DIR/media`
+- Bildverarbeitung: `sharp` (WebP, Zuschnitt, Metadaten entfernen); der Server braucht ausgehenden Zugriff auf `api.openverse.org` für Fotosuche und KI-Fotos
 - Lokal starten: `npm install && TEACHER_PASSWORD=test npm start` → http://localhost:3000
 - Tests: `npm test`
 - Demo/Lasttest mit Bots: `node scripts/simulate.js http://localhost:3000 CODE 20` (Bots spielen jede Phase automatisch mit)

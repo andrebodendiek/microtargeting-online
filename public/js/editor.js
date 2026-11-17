@@ -23,6 +23,72 @@ const CatPick = ({ value = [], onInput, max = 3 }) => html`<div class="bb-row wr
 const Select = ({ value, onInput, options }) => html`<${SelectMenu} value=${value} onChange=${onInput} options=${options.map(([v, l, hint]) => ({ value: v, label: l, hint }))} />`;
 const move = (arr, i, d) => { const a = arr.slice(); const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; };
 
+// ------------------------------------------------------------------ Bildfeld: Foto suchen (Openverse), hochladen, entfernen
+function ImageField({ image, onChange, query }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const fileRef = useRef(null);
+  async function upload(file) {
+    if (!file) return;
+    setBusy(true); setErr('');
+    try {
+      const r = await fetch('/api/images/upload', { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      onChange(d);
+    } catch (e) { setErr(e.message || 'Upload fehlgeschlagen'); } finally { setBusy(false); }
+  }
+  return html`<div class="img-field">
+    <div class="img-prev" onDragOver=${(e) => e.preventDefault()} onDrop=${(e) => { e.preventDefault(); upload(e.dataTransfer.files[0]); }}>
+      ${image ? html`<img src=${image.src} alt=${image.alt || ''} />` : html`<span class="muted"><i class="bi bi-image"></i> kein Foto – Ersatzgrafik</span>`}
+      ${busy && html`<span class="img-busy"><span class="spinner"></span></span>`}
+    </div>
+    <div class="img-side">
+      <div class="bb-row gap wrap">
+        <button type="button" class="btn btn-sm btn-primary" onClick=${() => setOpen(true)}><i class="bi bi-search"></i> Foto suchen</button>
+        <button type="button" class="btn btn-sm" onClick=${() => fileRef.current?.click()}><i class="bi bi-upload"></i> Hochladen</button>
+        ${image && html`<button type="button" class="btn btn-sm btn-ghost" onClick=${() => onChange(undefined)}><i class="bi bi-x-lg"></i> Entfernen</button>`}
+        <input type="file" accept="image/*" hidden ref=${fileRef} onChange=${(e) => upload(e.target.files[0])} />
+      </div>
+      ${image && html`<input class="form-control form-control-sm" maxlength="160" placeholder="Bildbeschreibung (für Screenreader)" value=${image.alt || ''} onInput=${(e) => onChange({ ...image, alt: e.target.value })} />`}
+      ${image?.credit && html`<small class="muted">Foto: ${image.credit.creator}${image.credit.license ? ` · ${image.credit.license}` : ''}</small>`}
+      <small class="muted">Datei auch per Ziehen auf die Vorschau. Wird automatisch auf 960×600 zugeschnitten.</small>
+      ${err && html`<small class="error">${err}</small>`}
+    </div>
+    ${open && html`<${ImageSearch} initial=${query} onClose=${() => setOpen(false)} onPick=${(img) => { onChange(img); setOpen(false); }} />`}
+  </div>`;
+}
+
+function ImageSearch({ initial = '', onClose, onPick }) {
+  const [q, setQ] = useState(initial);
+  const [res, setRes] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(null);
+  const [err, setErr] = useState('');
+  async function search(e) {
+    e?.preventDefault(); if (!q.trim()) return;
+    setBusy(true); setErr('');
+    try { const d = await api(`/api/images/search?q=${encodeURIComponent(q)}`); setRes(d.results); } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  }
+  async function pick(r) {
+    setPicking(r.id); setErr('');
+    try { onPick(await api('/api/images/import', { method: 'POST', body: JSON.stringify({ id: r.id }) })); } catch (e) { setErr(e.message); setPicking(null); }
+  }
+  useEffect(() => { if (initial) search(); const k = (e) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
+  return html`<div class="modal-backdrop-bb" onClick=${onClose}>
+    <div class="card img-modal" onClick=${(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Foto suchen">
+      <div class="bb-row between"><h3><i class="bi bi-images"></i> Freie Fotos suchen</h3><button class="icon-btn" onClick=${onClose} aria-label="Schließen"><i class="bi bi-x-lg"></i></button></div>
+      <form class="bb-row gap" onSubmit=${search}><input class="form-control" autofocus value=${q} onInput=${(e) => setQ(e.target.value)} placeholder="Suchbegriff – englisch liefert mehr Treffer, z. B. „skatepark“" /><button class="btn btn-primary" disabled=${busy}>${busy ? '…' : html`<i class="bi bi-search"></i>`} Suchen</button></form>
+      <small class="muted">Quelle: Openverse – nur Fotos mit CC0, Public Domain oder CC BY (frei nutzbar, Urheber*in wird automatisch genannt). Bitte keine Fotos mit erkennbaren Prominenten, Marken oder Kindern wählen.</small>
+      ${err && html`<p class="error">${err}</p>`}
+      <div class="img-grid">${(res || []).map((r) => html`<button type="button" class=${`img-hit ${picking === r.id ? 'picking' : ''}`} disabled=${!!picking} onClick=${() => pick(r)} title=${`${r.title} – ${r.creator} (${r.license})`}>
+        <img src=${r.thumb} alt=${r.title} loading="lazy" /><span>${r.creator} · ${r.license === 'by' ? 'CC BY' : r.license === 'cc0' ? 'CC0' : 'PD'}</span>${picking === r.id && html`<span class="img-busy"><span class="spinner"></span></span>`}
+      </button>`)}</div>
+      ${res && !res.length && html`<p class="muted">Keine Treffer – anderen Begriff probieren.</p>`}
+    </div>
+  </div>`;
+}
+
 // ------------------------------------------------------------------ Tabs
 function PostsTab({ c, set }) {
   const [cat, setCat] = useState('all');
@@ -48,6 +114,7 @@ function PostsTab({ c, set }) {
           <${Field} label="Bild-Emojis" hint="1–3"><${Emojis} value=${p.art} onInput=${(v) => upd(p.id, { art: v })} /><//>
           <${Field} label="Farbverlauf"><${Colors} value=${p.bg} onInput=${(v) => upd(p.id, { bg: v })} /><//>
         </div>
+        <${Field} label="Foto"><${ImageField} image=${p.image} query=${p.headline} onChange=${(img) => upd(p.id, { image: img })} /><//>
         <${Field} label="Überschrift"><${Text} value=${p.headline} max=${100} onInput=${(v) => upd(p.id, { headline: v })} /><//>
         <${Field} label="Anreißer"><${Text} area value=${p.teaser} max=${360} onInput=${(v) => upd(p.id, { teaser: v })} /><//>
         <${Field} label="Weiterlesen-Text"><${Text} area rows=${3} value=${p.body} max=${700} onInput=${(v) => upd(p.id, { body: v })} /><//>
@@ -61,6 +128,7 @@ function PostsTab({ c, set }) {
 function AdForm({ a, upd, withCats = true }) {
   return html`<div class="ed-form">
     <div class="ed-preview"><${AdVisual} ad=${a} /></div>
+    <${Field} label="Produktfoto"><${ImageField} image=${a.image} query=${a.product} onChange=${(img) => upd({ image: img })} /><//>
     <div class="ed-grid">
       <${Field} label="Kurzname"><${Text} value=${a.label} max=${24} onInput=${(v) => upd({ label: v })} /><//>
       <${Field} label="Marke" hint="fiktiv"><${Text} value=${a.brand} max=${30} onInput=${(v) => upd({ brand: v })} /><//>

@@ -70,7 +70,7 @@ function App() {
         ${[['❤️', 'Liken', 'Alle scrollen durch den bubbl-Feed und verteilen Likes.'], ['📊', 'Auswerten', 'Gruppen erstellen gemeinsam eine Interessen-Datenbank.'], ['🎯', 'Targeten', 'Gruppen platzieren Werbung – gegen einen Algorithmus.'], ['🕵️', 'Enthüllen', 'Tracking, Profile, Filterblase und Wahlwerbung werden sichtbar.']].map(([i, t, d]) => html`
           <div class="how-item"><span>${i}</span><b>${t}</b><small class="muted">${d}</small></div>`)}
       </section>
-      <footer class="muted foot">Nach einer Unterrichtsidee von Anna Rebmann (WBM Informatik, Kohorte III) · digital erweitert</footer>
+      <footer class="muted foot">Nach einer Unterrichtsidee von Anna Rebmann (WBM Informatik, Kohorte III) · digital erweitert · <a href="/bildnachweise">Bildnachweise</a></footer>
     </main>`;
 }
 render(html`<${App} />`, document.getElementById('app'));

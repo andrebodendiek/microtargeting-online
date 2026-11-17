@@ -10,6 +10,7 @@ import { DEFAULT_CONTENT } from './public/shared/content.js';
 import { createAuth } from './src/auth.js';
 import { ContentStore, applyItems, Invalid, validateContent } from './src/content-store.js';
 import { generateSuggestions, aiAvailable, AI_MODEL } from './src/ai.js';
+import { MediaStore, searchOpenverse } from './src/images.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -17,6 +18,7 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const store = new Store(DATA_DIR);
 const content = new ContentStore(DATA_DIR);
+const media = new MediaStore(DATA_DIR);
 // Befund 3: Inhaltspakete gespeicherter Räume prüfen – ungültige fallen auf den Standard zurück
 for (const room of store.rooms.values()) {
   if (!room.content) continue;
@@ -51,6 +53,7 @@ app.use('/vendor/htm', express.static(nm('htm'), { maxAge: '7d' }));
 app.use('/vendor/bootstrap', express.static(nm('bootstrap/dist'), { maxAge: '7d' }));
 app.use('/vendor/bootstrap-icons', express.static(nm('bootstrap-icons/font'), { maxAge: '7d' }));
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], maxAge: '5m' }));
+app.use('/media', express.static(media.dir, { maxAge: '30d', immutable: true, fallthrough: false }));
 
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
@@ -127,6 +130,15 @@ app.put('/api/content', requireTeacher, express.json({ limit: '512kb' }), (req, 
 app.post('/api/content/reset', requireTeacher, (_req, res) => { try { res.json({ content: content.reset(), ...content.meta() }); } catch (e) { sendErr(res, e); } });
 app.post('/api/content/restore', requireTeacher, (req, res) => { try { res.json({ content: content.restore(req.body?.id), ...content.meta() }); } catch (e) { sendErr(res, e); } });
 
+// Fotos für übernommene KI-Vorschläge automatisch holen (Openverse), Fehler sind nicht schlimm
+async function attachImages(items) {
+  for (const it of items) {
+    const target = it.kind === 'post' ? it.post : it.kind === 'ad' ? it.ad : null;
+    if (!target || target.image || !it.image_query || it.action === 'remove') continue;
+    try { const img = await media.firstHit(it.image_query); if (img) target.image = img; } catch (e) { console.warn('Kein Foto für', it.image_query, e.message); }
+  }
+  return items;
+}
 const jobs = new Map();
 const jobInfo = (j) => ({ id: j.id, status: j.status, error: j.error, setId: j.setId, startedAt: j.startedAt, mode: j.mode, topic: j.topic });
 const aiLimiter = [];
@@ -141,12 +153,12 @@ function startAiJob({ mode, topic, scope, source }) {
   const abort = new AbortController();
   const killer = setTimeout(() => abort.abort(), 8 * 60 * 1000);
   generateSuggestions({ mode, topic, scope, content: content.current, signal: abort.signal })
-    .then((r) => {
+    .then(async (r) => {
       const set = { id: G.rid(6), createdAt: Date.now(), source, mode, topic, summary: r.summary, items: r.items };
       content.addSuggestionSet(set);
       job.status = 'done'; job.setId = set.id;
       if (source === 'auto' && content.data.automation.autoApply && set.items.length) {
-        try { content.save(applyItems(content.current, set.items), 'Automatisch übernommen (KI)', 'KI-Automatik'); set.items.forEach((i) => { i.status = 'applied'; }); content.persist(); } catch (e) { console.error('Auto-Übernahme fehlgeschlagen:', e.message); }
+        try { await attachImages(set.items); content.save(applyItems(content.current, set.items), 'Automatisch übernommen (KI)', 'KI-Automatik'); set.items.forEach((i) => { i.status = 'applied'; }); content.persist(); } catch (e) { console.error('Auto-Übernahme fehlgeschlagen:', e.message); }
       }
     })
     .catch((e) => { job.status = 'error'; job.error = abort.signal.aborted ? 'Die KI hat zu lange gebraucht (über 8 Minuten). Bitte erneut versuchen.' : (e?.message || 'Fehler bei der KI-Anfrage'); console.error('KI-Fehler:', e?.message); })
@@ -168,13 +180,14 @@ app.get('/api/ai/jobs/:id', requireTeacher, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ ...jobInfo(j), set: j.setId ? content.data.suggestions.find((x) => x.id === j.setId) : null });
 });
-app.post('/api/ai/apply', requireTeacher, (req, res) => {
+app.post('/api/ai/apply', requireTeacher, async (req, res) => {
   const set = content.data.suggestions.find((x) => x.id === req.body?.setId);
   if (!set) return res.status(404).json({ error: 'Vorschläge nicht gefunden' });
   const ids = new Set(Array.isArray(req.body?.itemIds) ? req.body.itemIds : []);
   const items = set.items.filter((i) => ids.has(i.id) && i.status === 'pending');
   if (!items.length) return res.status(400).json({ error: 'Keine offenen Vorschläge ausgewählt' });
   try {
+    await attachImages(items);
     const saved = content.save(applyItems(content.current, items), `KI-Vorschläge übernommen (${items.length})`);
     items.forEach((i) => { i.status = 'applied'; }); content.persist();
     res.json({ content: saved, ...content.meta() });
@@ -207,6 +220,49 @@ setInterval(() => {
     a.lastRun = Date.now(); content.persist(); // erst nach erfolgreichem Start merken
   } catch (e) { console.error('Automatik:', e.message); }
 }, 60 * 60 * 1000).unref();
+
+// ------------------------------------------------------------ Bilder (Openverse-Suche, Import, Upload)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+app.get('/api/images/search', requireTeacher, async (req, res) => {
+  if (!hit(`imgsearch:${req.ip}`, 40, 60_000)) return res.status(429).json({ error: 'Zu viele Suchanfragen – kurz warten.' });
+  try {
+    const results = await searchOpenverse(String(req.query.q || ''), { pageSize: 20, page: Math.min(5, Number(req.query.page) || 1) });
+    res.json({ results: results.map((r) => ({ ...r, thumb: `/api/images/thumb/${r.id}` })) });
+  } catch (e) { res.status(502).json({ error: e.message || 'Bildsuche nicht erreichbar' }); }
+});
+// Vorschaubilder über den eigenen Server ausliefern (Lehrkraft-Gerät spricht nicht direkt mit Dritten)
+app.get('/api/images/thumb/:id', requireTeacher, async (req, res) => {
+  if (!/^[0-9a-f-]{36}$/.test(req.params.id)) return res.status(400).end();
+  try {
+    const r = await fetch(`https://api.openverse.org/v1/images/${req.params.id}/thumb/`, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': 'bubbl-unterrichtsspiel/1.0' } });
+    if (!r.ok) return res.status(502).end();
+    res.setHeader('Content-Type', r.headers.get('content-type')?.startsWith('image/') ? r.headers.get('content-type') : 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch { res.status(502).end(); }
+});
+app.post('/api/images/import', requireTeacher, async (req, res) => {
+  if (!hit(`imgimport:${req.ip}`, 30, 60_000)) return res.status(429).json({ error: 'Zu viele Importe – kurz warten.' });
+  try { res.json(await media.fromOpenverse(String(req.body?.id || ''))); } catch (e) { res.status(400).json({ error: e.message || 'Import fehlgeschlagen' }); }
+});
+app.post('/api/images/upload', requireTeacher, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '12mb' }), async (req, res) => {
+  if (!hit(`imgupload:${req.ip}`, 30, 60_000)) return res.status(429).json({ error: 'Zu viele Uploads – kurz warten.' });
+  try { res.json(await media.fromUpload(req.body)); } catch (e) { res.status(400).json({ error: e.message || 'Upload fehlgeschlagen' }); }
+});
+// Bildnachweise aller aktuell verwendeten Fotos (Pflicht bei CC BY)
+app.get('/bildnachweise', (_req, res) => {
+  const c = content.current;
+  const rows = [...c.posts.map((p) => [p.headline, p.image]), ...c.ads.map((a) => [`Anzeige: ${a.product}`, a.image]), [`Anzeige: ${c.fairness.ad.product}`, c.fairness.ad.image]]
+    .filter(([, img]) => img?.credit);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>bubbl · Bildnachweise</title>
+<link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css"><link rel="stylesheet" href="/css/app.css"></head>
+<body><main class="container py-4" style="max-width:960px"><h1 class="h3 mb-3">Bildnachweise</h1>
+<p class="text-secondary">Die Fotos stammen über <a href="https://openverse.org">Openverse</a> aus freien Quellen (CC0, Public Domain, CC BY). Sie wurden auf ein einheitliches Format zugeschnitten. Eigene Uploads sind als „eigenes Foto“ gekennzeichnet.</p>
+<table class="table table-sm align-middle"><thead><tr><th>Bild</th><th>Verwendet für</th><th>Urheber*in</th><th>Lizenz</th></tr></thead><tbody>
+${rows.map(([use, img]) => `<tr><td><img src="${esc(img.src)}" alt="" width="96" height="60" style="object-fit:cover;border-radius:6px"></td><td>${esc(use)}</td><td>${img.credit.url ? `<a href="${esc(img.credit.url)}" rel="noopener">${esc(img.credit.creator)}</a>` : esc(img.credit.creator)}${img.credit.title ? `<br><small class="text-secondary">${esc(img.credit.title)}</small>` : ''}</td><td>${img.credit.license_url ? `<a href="${esc(img.credit.license_url)}" rel="noopener">${esc(img.credit.license)}</a>` : esc(img.credit.license)}</td></tr>`).join('')}
+</tbody></table><a href="/" class="btn btn-sm">← Startseite</a></main></body></html>`);
+});
 
 app.get('/api/qr.svg', async (req, res) => {
   const text = String(req.query.text || '').slice(0, 300);

@@ -14,8 +14,9 @@ const nullable = (schema) => ({ anyOf: [schema, { type: 'null' }] });
 const strArr = { type: 'array', items: { type: 'string' } };
 const POST_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['cat', 'page', 'round', 'time', 'art', 'bg', 'headline', 'teaser', 'body'],
+  required: ['cat', 'page', 'round', 'time', 'art', 'bg', 'headline', 'teaser', 'body', 'image_query'],
   properties: {
+    image_query: { type: 'string', description: 'Kurzer ENGLISCHER Suchbegriff für ein passendes freies Foto (2-4 Wörter, keine Marken, keine Prominenten), z. B. "skatepark ramp"' },
     cat: { type: 'string', enum: CAT_IDS }, page: { type: 'string', enum: PAGE_KEYS }, round: { type: 'integer', enum: [1, 2] },
     time: { type: 'string', description: 'z. B. "3 Std." oder "1 Tag"' },
     art: { ...strArr, description: '1-3 Emojis als Bildmotiv, erstes = Hauptmotiv' },
@@ -26,8 +27,9 @@ const POST_SCHEMA = {
 };
 const AD_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['label', 'brand', 'product', 'slogan', 'price', 'cta', 'art', 'bg', 'cats'],
+  required: ['label', 'brand', 'product', 'slogan', 'price', 'cta', 'art', 'bg', 'cats', 'image_query'],
   properties: {
+    image_query: { type: 'string', description: 'Kurzer ENGLISCHER Suchbegriff für ein neutrales Produktfoto ohne Markenlogo, z. B. "hiking backpack"' },
     label: { type: 'string', description: 'Kurzname, max. 24 Zeichen' }, brand: { type: 'string', description: 'FIKTIVE Marke' },
     product: { type: 'string' }, slogan: { type: 'string' }, price: { type: 'string' }, cta: { type: 'string' },
     art: { ...strArr, description: 'genau 2 Emojis' }, bg: { ...strArr, description: 'zwei kräftige Farben #rrggbb (weiße Schrift muss lesbar sein)' },
@@ -80,6 +82,7 @@ Regeln für deine Vorschläge:
 - Altersgerecht, sachlich korrekt, ohne Gewalt, Angstmache oder Diskriminierung. Deutsch, Schreibweise mit Gendersternchen wie im Bestand.
 - Werbeanzeigen haben 1-2 eindeutige Zielkategorien; kombiniere Kategorien so, dass die Zuordnung eine kleine Denkaufgabe ist.
 - Wahlbotschaften: kurz, plakativ, je Kategorie eine; Widerspruchspaare (Technik↔Umweltschutz, Sport↔Natur, Naschen↔Ernährung) müssen sich weiterhin klar widersprechen.
+- Zu jedem Beitrag und jeder Anzeige gehört image_query: ein kurzer englischer Suchbegriff für ein frei lizenziertes Foto (Motiv, keine Marken, keine Prominenten, keine Kinder im Mittelpunkt).
 - Quizfragen: eindeutig eine richtige von 4 Antworten, fachlich präzise, mit kurzer Erklärung.
 - Schlage nur sinnvolle Änderungen vor (höchstens 14 Einträge). Bei "replace"/"remove" gib target_id aus dem Bestand an; bei "add" target_id = null. Fülle nur das zum kind passende Feld, alle anderen null.
 - Gib deine Vorschläge am Ende ausschließlich über das Werkzeug submit_suggestions ab.`;
@@ -108,6 +111,8 @@ function cleanItems(raw, content) {
   for (const it of Array.isArray(raw) ? raw.slice(0, 16) : []) {
     try {
       const base = { id: crypto.randomBytes(4).toString('hex'), kind: it.kind, action: it.action, target_id: it.target_id || null, reason: String(it.reason || '').slice(0, 300), status: 'pending' };
+      const iq = String(it.post?.image_query || it.ad?.image_query || '').replace(/[^\p{L}\p{N} -]/gu, '').trim().slice(0, 80);
+      if (iq) base.image_query = iq;
       if (it.action !== 'add' && it.kind !== 'party_message' && !ids[it.kind]?.has(base.target_id)) continue;
       if (it.kind === 'post') { if (it.action !== 'remove') base.post = validatePost({ ...it.post, id: 'tmp' }); }
       else if (it.kind === 'ad') { if (it.action !== 'remove') base.ad = validateAd({ ...it.ad, id: 'tmp' }); }

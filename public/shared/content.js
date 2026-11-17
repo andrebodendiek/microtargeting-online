@@ -1,3 +1,5 @@
+import { IMAGES } from './images.js';
+
 // Gemeinsame Spielinhalte für Server und Browser.
 // Grundlage: „Microtargeting – Wie entsteht personalisierte Werbung?“
 // (Unterrichtsbeispiel von Anna Rebmann, WBM Informatik Kohorte III),
@@ -274,9 +276,11 @@ const DEFAULT_QUIZ = [
 // Beiträge, Anzeigen, Wahlbotschaften, Quiz und Fairness-Szenario sind editierbar (Inhalts-Editor/KI).
 // Die exportierten Objekte werden mit applyContent() an Ort und Stelle ersetzt – alle Importe
 // sehen dadurch sofort das Paket des aktuellen Raums.
+// Fotos (Openverse, CC0 / CC BY) an die Standardinhalte hängen
+const withImage = (x) => (IMAGES[x.id] ? { ...x, image: IMAGES[x.id] } : x);
 export const DEFAULT_CONTENT = Object.freeze({
-  posts: DEFAULT_POSTS, ads: DEFAULT_ADS, party: DEFAULT_PARTY, partyMessages: DEFAULT_PARTY_MESSAGES,
-  contradictions: DEFAULT_CONTRADICTIONS, quiz: DEFAULT_QUIZ, fairness: DEFAULT_FAIRNESS,
+  posts: DEFAULT_POSTS.map(withImage), ads: DEFAULT_ADS.map(withImage), party: DEFAULT_PARTY, partyMessages: DEFAULT_PARTY_MESSAGES,
+  contradictions: DEFAULT_CONTRADICTIONS, quiz: DEFAULT_QUIZ, fairness: { ...DEFAULT_FAIRNESS, ad: withImage(DEFAULT_FAIRNESS.ad) },
 });
 export const POSTS = [];
 export const POST = Object.create(null); // ohne Prototyp: POST['constructor'] ist kein gültiger Beitrag

@@ -1,6 +1,6 @@
 import {
   html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
-  PostArt, PageHead, AdVisual, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
+  PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, AVATARS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
 import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
@@ -98,6 +98,7 @@ function ArticleSheet({ post, onClose, liked, canLike, onLike }) {
       <${PageHead} post=${post} extra=${html`<button class="icon-btn" onClick=${onClose} aria-label="Schließen">✕</button>`} />
       <${PostArt} post=${post} />
       <div class="post-body article">
+        <${Credit} image=${post.image} />
         <h3>${post.headline}</h3>
         <p>${post.teaser.replace(/\s*…$/, '')} ${post.body.replace(/^…\s*/, '')}</p>
         <div class="article-actions">
@@ -270,7 +271,7 @@ function Empfang({ v, act }) {
     ${rec.map((id) => html`<article class="post card" key=${id}>
       <div class="post-head"><span class="page-av">${AD[id].art[0]}</span><div class="page-meta"><b>${AD[id].brand}</b><span class="sponsored"><b>Gesponsert</b></span></div></div>
       <${AdVisual} ad=${AD[id]} />
-      <div class="post-body"><h3>${AD[id].product}</h3><p>${AD[id].slogan}</p><span class="cta-fake">${AD[id].cta} ›</span>
+      <div class="post-body"><${Credit} image=${AD[id].image} />${AD[id].image ? '' : html`<h3>${AD[id].product}</h3>`}<p>${AD[id].slogan}</p><span class="cta-fake">${AD[id].cta} ›</span>
         <${RateButtons} adId=${id} value=${v.ratings[id]} act=${act} />
       </div>
     </article>`)}
@@ -411,6 +412,7 @@ function PlayerMenu({ v, act }) {
   return html`<${Dropdown} btnClass="avatar-btn" caret=${false} title="Profil-Menü" label=${html`<${Avatar} id=${v.me.id} avatar=${v.me.avatar} size=${38} />`} items=${[
     { header: `Nutzer-ID #${v.me.id} · Raum ${code}` },
     { label: 'Aufgabe & Fortschritt', icon: 'list-check', hint: PHASE[v.phase].title, onClick: () => scrollTo({ top: 0, behavior: 'smooth' }) },
+    { label: 'Bildnachweise', icon: 'images', hint: 'Fotograf*innen und Lizenzen', href: '/bildnachweise', target: '_blank' },
     { label: 'Meine Daten herunterladen', icon: 'file-earmark-lock', hint: 'Auskunft nach Art. 15 DSGVO', onClick: auskunft },
     { divider: true },
     { label: 'Raum verlassen', icon: 'box-arrow-right', danger: true, hint: 'Dein Profil bleibt im Raum gespeichert', onClick: () => { if (confirm('Raum verlassen? Mit dem gleichen Gerät kommst du über den Raumcode wieder in dein Profil.')) location.href = '/'; } },
