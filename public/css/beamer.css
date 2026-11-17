@@ -12,7 +12,7 @@ body { overflow: hidden; }
 .beamer .step-text b { font-size: 0.98rem; white-space: normal; line-height: 1.12; }
 .beamer .step-text small { font-size: 0.72rem; }
 
-.joinbox { display: flex; align-items: center; gap: 0.8rem; background: #fff; color: #0b0b1a; padding: 0.45rem 1rem 0.45rem 0.45rem; border-radius: 1.1rem; box-shadow: var(--shadow); }
+.joinbox { border: 1px solid var(--line); display: flex; align-items: center; gap: 0.8rem; background: #fff; color: #0b0b1a; padding: 0.45rem 1rem 0.45rem 0.45rem; border-radius: 1.1rem; box-shadow: var(--shadow); }
 .joinbox img { width: 4.4rem; height: 4.4rem; border-radius: 0.6rem; }
 .joinbox div { display: flex; flex-direction: column; line-height: 1.05; }
 .joinbox small { font-size: 0.85rem; font-weight: 600; opacity: 0.7; }
@@ -92,7 +92,7 @@ body { overflow: hidden; }
 .hm-row.head { font-size: 0.85rem; color: var(--muted); font-weight: 700; text-align: center; }
 .hm-cat { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
 .hm-cell { aspect-ratio: 1; max-height: 3.4rem; border-radius: 6px; background: var(--field); display: grid; place-items: center; font-weight: 800; font-size: 0.95rem; transition: background 0.5s, transform 0.3s; }
-.hm-cell.has { background: color-mix(in srgb, var(--c) calc(35% + var(--k) * 65%), transparent); color: #fff; animation: popin 0.4s both; }
+.hm-cell.has { background: color-mix(in srgb, var(--c) calc(55% + var(--k) * 45%), #0b0b1a); color: #fff; animation: popin 0.4s both; }
 .hm-cell.wrong { outline: 2px dashed var(--bad); outline-offset: -2px; }
 .group-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.8rem; }
 .group-card .group-badge, .group-card .status-pill { white-space: nowrap; }

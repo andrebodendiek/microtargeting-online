@@ -30,7 +30,7 @@ h3 { font-size: 17px; }
 .group-list { display: flex; flex-direction: column; gap: 6px; }
 .glist-item { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .preview { overflow: hidden; }
-.preview-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #070812; }
+.preview-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--bg); }
 .preview-frame iframe { position: absolute; top: 0; left: 0; width: 1600px; height: 900px; border: 0; transform-origin: 0 0; transform: scale(var(--scale, 0.36)); pointer-events: none; }
 .notes-mod { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow: auto; }
 .note-mod { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--field); font-size: 14px; }

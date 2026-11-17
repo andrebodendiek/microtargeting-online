@@ -3,7 +3,7 @@
 
 :root {
   color-scheme: light;
-  --bg: #f3f4fb;
+  --bg: #f7f8fb;
   --text: #0f1222;
   --muted: #555b76;
   --faint: #8a90aa;
@@ -21,7 +21,8 @@
   --ok: #16a34a; --ok-bg: rgba(22, 163, 74, 0.12);
   --warn: #d97706; --warn-bg: rgba(217, 119, 6, 0.12);
   --bad: #dc2626; --bad-bg: rgba(220, 38, 38, 0.10);
-  --blob1: #c4b5fd; --blob2: #f9a8d4; --blob3: #93c5fd; --blob4: #fcd34d;
+  --blob1: #e4e1fb; --blob2: #f8e3ee; --blob3: #dfeafb; --blob4: #f6eedd;
+  --blob-op: 0.7;
   --r: 20px;
   --font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -63,12 +64,12 @@ h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
 
 /* ---------------------------------------------------------------- Aurora */
 .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.aurora .blob { position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%; filter: blur(110px); opacity: 0.55; will-change: transform; }
+.aurora .blob { position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%; filter: blur(120px); opacity: var(--blob-op, 0.55); will-change: transform; }
 .aurora .b1 { background: var(--blob1); top: -20vmax; left: -15vmax; animation: drift1 34s ease-in-out infinite alternate; }
 .aurora .b2 { background: var(--blob2); top: -10vmax; right: -20vmax; animation: drift2 28s ease-in-out infinite alternate; }
 .aurora .b3 { background: var(--blob3); bottom: -25vmax; left: 10vmax; animation: drift3 38s ease-in-out infinite alternate; }
-.aurora .b4 { background: var(--blob4); bottom: -30vmax; right: -10vmax; opacity: 0.3; animation: drift1 40s ease-in-out infinite alternate-reverse; }
-.aurora .grain { position: absolute; inset: 0; opacity: 0.05; background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 4px 4px; color: var(--text); }
+.aurora .b4 { background: var(--blob4); bottom: -30vmax; right: -10vmax; animation: drift1 40s ease-in-out infinite alternate-reverse; }
+.aurora .grain { position: absolute; inset: 0; opacity: 0.025; background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 4px 4px; color: var(--text); }
 @keyframes drift1 { to { transform: translate(12vmax, 8vmax) scale(1.15); } }
 @keyframes drift2 { to { transform: translate(-10vmax, 12vmax) scale(0.9); } }
 @keyframes drift3 { to { transform: translate(8vmax, -10vmax) scale(1.1); } }
