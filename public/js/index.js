@@ -43,21 +43,21 @@ function App() {
         <form class="glass panel" onSubmit=${join}>
           <span class="kicker">Für SchülerInnen</span>
           <h2>Raum beitreten</h2>
-          <input class="field code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE"
+          <input class="form-control code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE"
             value=${code} onInput=${(e) => { setCode(e.target.value.toUpperCase()); setErr(''); }} aria-label="Raumcode" />
-          <button class="btn primary block">Los geht's →</button>
+          <button class="btn btn-primary w-100">Los geht's →</button>
         </form>
         <div class="glass panel">
           <span class="kicker">Für Lehrkräfte</span>
           <h2>Neues Spiel starten</h2>
           <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Die SchülerInnen brauchen keine Anmeldung und keine echten Namen.</p>
           ${me == null ? html`<small class="muted">…</small>` : !me.teacher ? html`<${TeacherLogin} configured=${me.configured} onSuccess=${refreshMe} />` : html`
-            <button class="btn primary block" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : '+ Raum erstellen'}</button>
+            <button class="btn btn-primary w-100" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : '+ Raum erstellen'}</button>
             ${rooms.length > 0 && html`<div class="my-rooms">
               <small class="muted">Deine letzten Räume</small>
               ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
             </div>`}
-            <div class="row-btns"><a class="btn small" href="/editor">✏️ Inhalts-Editor & KI</a><button class="btn small ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}>⎋ Abmelden</button></div>`}
+            <div class="row-btns"><a class="btn btn-sm" href="/editor"><i class="bi bi-pencil-square"></i> Inhalts-Editor & KI</a><button class="btn btn-sm btn-ghost" onClick=${async () => { await teacherLogout(); refreshMe(); }}><i class="bi bi-box-arrow-right"></i> Abmelden</button></div>`}
         </div>
       </section>
       ${err && html`<p class="error">${err}</p>`}

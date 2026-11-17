@@ -52,6 +52,8 @@ export const QUIZ_SECONDS = 20;
 
 // ---------------------------------------------------------------- Hilfen
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Nur echte, aktive Spieler-IDs (Zahl, eigener Schlüssel, nicht entfernt)
+const validPid = (room, id) => Number.isInteger(id) && Object.hasOwn(room.players, id) && !room.players[id].kicked;
 const playersOf = (room) => Object.values(room.players).filter((p) => !p.kicked).sort((a, b) => a.id - b.id);
 export const activePhases = (room) => PHASES.filter((p) => !p.optional || room.enabled[p.id] !== false);
 
@@ -382,14 +384,15 @@ export const actions = {
     if (Number.isFinite(d.sessionMs)) t.sessionMs += clamp(d.sessionMs, 0, 5000);
     // Protokoll für den Tracking-Inspektor: genau das, was angekommen ist (bereinigt)
     const clean = (m) => Object.fromEntries(Object.entries(m && typeof m === 'object' ? m : {}).filter(([k, v]) => POST[k] && Number.isFinite(v)).map(([k, v]) => [k, Math.round(v)]));
-    const body = { dwell_ms: clean(d.dwell), read_ms: clean(d.read), opens: clean(d.opens), events: Math.round(d.events || 0), scroll_px: Math.round(d.scrollPx || 0) };
+    const num = (v, max) => (Number.isFinite(v) ? clamp(Math.round(v), 0, max) : 0);
+    const body = { dwell_ms: clean(d.dwell), read_ms: clean(d.read), opens: clean(d.opens), events: num(d.events, 500), scroll_px: num(d.scrollPx, 50000) };
     for (const k of ['dwell_ms', 'read_ms', 'opens']) if (!Object.keys(body[k]).length) delete body[k];
     logTrack(p, 'POST /track', body);
   },
   tally(room, p, { cat, id, count }) {
     const g = groupOf(room, p);
     if (room.phase !== 'auswertung' || !g || g.tallyDone || !g.cats.includes(cat)) return;
-    if (!room.players[id]) return;
+    if (!validPid(room, id)) return;
     const v = clamp(Math.round(count) || 0, 0, room.settings.maxLikes);
     if (v) g.tally[cat][id] = v; else delete g.tally[cat][id];
   },
@@ -405,7 +408,7 @@ export const actions = {
   },
   adTarget(room, p, { adId, id }) {
     const g = groupOf(room, p); const w = room.adWork[adId];
-    if (room.phase !== 'werbung' || !g?.ads.includes(adId) || !w || w.done || !room.players[id]) return;
+    if (room.phase !== 'werbung' || !g?.ads.includes(adId) || !w || w.done || !validPid(room, id)) return;
     const i = w.targets.indexOf(id);
     if (i >= 0) w.targets.splice(i, 1);
     else if (w.targets.length < budgetOf(room)) w.targets.push(id);
@@ -419,7 +422,8 @@ export const actions = {
     if (value === 1 || value === -1) p.ratings[adId] = value; else delete p.ratings[adId];
   },
   infer(room, p, { key, value }) {
-    if (room.phase !== 'profil' || typeof key !== 'string' || key.length > 40) return;
+    if (room.phase !== 'profil' || typeof key !== 'string') return;
+    if (!inferencesOf(p, profileOf(p)).some((i) => i.key === key)) return; // nur tatsächlich gezeigte Vermutungen
     if (value === true || value === false) p.inferFb[key] = value; else delete p.inferFb[key];
   },
   more(room, p, { explore }) {
@@ -478,10 +482,16 @@ export const actions = {
   },
   regroup(room) { formGroups(room); },
   setGroup(room, _p, { id, group }) {
-    const p = room.players[id];
+    const p = validPid(room, id) ? room.players[id] : null;
     if (p && room.groups?.find((g) => g.id === group)) p.group = group;
   },
-  kick(room, _p, { id }) { if (room.players[id]) room.players[id].kicked = true; },
+  kick(room, _p, { id }) {
+    if (!validPid(room, id)) return;
+    room.players[id].kicked = true;
+    // aus Zielgruppen und Auswertungstabellen entfernen, damit kein Budget blockiert bleibt
+    for (const w of Object.values(room.adWork || {})) w.targets = w.targets.filter((x) => x !== id);
+    for (const gr of room.groups || []) for (const c of Object.keys(gr.tally || {})) delete gr.tally[c][id];
+  },
   settings(room, _p, s) {
     if (Number.isFinite(s.maxLikes)) room.settings.maxLikes = clamp(Math.round(s.maxLikes), 1, 22);
     if (Number.isFinite(s.budget)) room.settings.budget = clamp(Math.round(s.budget), 0, 60);
@@ -547,7 +557,7 @@ function progress(room, ps) {
     case 'wahl': return { done: ps.filter((p) => p.vote).length, total: n, label: 'haben abgestimmt' };
     case 'werkbank': return { done: (room.groups || []).filter((g) => WEIGHT_KEYS.some((k) => (g.weights?.[k] ?? START_WEIGHTS[k]) !== START_WEIGHTS[k])).length, total: (room.groups || []).length, label: 'Gruppen experimentieren' };
     case 'fairness': return { done: ps.filter((p) => p.fair?.interest != null && p.fair?.fair != null).length, total: n, label: 'haben geantwortet' };
-    case 'quiz': { const a = room.quiz.answers?.[room.quiz.idx] || {}; return { done: Object.keys(a).length, total: n, label: room.quiz.idx >= 0 && room.quiz.idx < QUIZ.length ? `Antworten auf Frage ${room.quiz.idx + 1}/${QUIZ.length}` : 'Quiz' }; }
+    case 'quiz': { const a = room.quiz.answers?.[room.quiz.idx] || {}; return { done: room.quiz.idx >= QUIZ.length ? n : Object.keys(a).length, total: n, label: room.quiz.idx >= 0 && room.quiz.idx < QUIZ.length ? `Antworten auf Frage ${room.quiz.idx + 1}/${QUIZ.length}` : room.quiz.idx >= QUIZ.length ? 'Quiz beendet' : 'Quiz startet gleich' }; }
     case 'reflexion': return { done: ps.filter((p) => p.reflect.opinion != null).length, total: n, label: 'haben Stellung genommen' };
     default: return { done: 0, total: n, label: '' };
   }

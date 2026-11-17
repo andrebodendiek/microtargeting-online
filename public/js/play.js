@@ -102,7 +102,7 @@ function ArticleSheet({ post, onClose, liked, canLike, onLike }) {
         <p>${post.teaser.replace(/\s*…$/, '')} ${post.body.replace(/^…\s*/, '')}</p>
         <div class="article-actions">
           <button class=${`btn ${liked ? 'liked' : ''}`} disabled=${!liked && !canLike} onClick=${onLike}>${liked ? '❤️ Gefällt dir' : '🤍 Gefällt mir'}</button>
-          <button class="btn ghost" onClick=${onClose}>Zurück zum Feed</button>
+          <button class="btn btn-ghost" onClick=${onClose}>Zurück zum Feed</button>
         </div>
       </div>
     </div>
@@ -140,7 +140,7 @@ function PhaseFlash({ phase }) {
 
 // ------------------------------------------------------------------ Phasen
 function Lobby({ v, act }) {
-  return html`<section class="stagger col">
+  return html`<section class="stagger bb-col">
     <div class="glass hero-card">
       <${Avatar} avatar=${v.me.avatar} size=${96} />
       <small class="muted">Deine Nutzer-ID</small>
@@ -164,7 +164,7 @@ function Feed({ v, act }) {
   const can = likes.length < max;
   const toggle = (id) => act('like', { postId: id });
   const order = v.feed || [];
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <div class="likes-left glass">
       <div class="like-dots">${Array.from({ length: max }, (_, i) => html`<i class=${i < likes.length ? 'on' : ''}></i>`)}</div>
       <span><b>${max - likes.length}</b> von ${max} Likes übrig</span>
@@ -172,7 +172,7 @@ function Feed({ v, act }) {
     ${order.map((id) => POST[id] && html`<${Post} key=${id} post=${POST[id]} liked=${likes.includes(id)} canLike=${can} onLike=${() => toggle(id)} onOpen=${setOpen} />`)}
     <div class="glass pad center">
       <p>${likes.length === 0 ? 'Du hast noch nichts geliked.' : `Du hast ${likes.length} Beiträge geliked.`}</p>
-      <button class=${`btn ${v.me.feedDone ? '' : 'primary'}`} onClick=${() => { act('feedDone', { done: !v.me.feedDone }); if (!v.me.feedDone) confetti(40); }}>
+      <button class=${`btn ${v.me.feedDone ? '' : 'btn-primary'}`} onClick=${() => { act('feedDone', { done: !v.me.feedDone }); if (!v.me.feedDone) confetti(40); }}>
         ${v.me.feedDone ? '✓ Fertig – doch noch ändern' : 'Ich bin fertig'}
       </button>
     </div>
@@ -182,7 +182,7 @@ function Feed({ v, act }) {
 
 function GroupHeader({ g, children }) {
   return html`<div class="glass pad group-head">
-    <div class="row wrap gap"><${GroupBadge} gid=${g.id} big /> ${g.cats.map((c) => html`<${CatChip} cat=${c} on />`)}</div>
+    <div class="bb-row wrap gap"><${GroupBadge} gid=${g.id} big /> ${g.cats.map((c) => html`<${CatChip} cat=${c} on />`)}</div>
     <div class="members">${g.members.map((m) => html`<${Avatar} id=${m.id} avatar=${m.avatar} size=${36} online=${m.online} />`)}</div>
     ${children}
   </div>`;
@@ -192,7 +192,7 @@ function Auswertung({ v, act }) {
   const g = v.group;
   if (!g) return html`<div class="glass pad">Du bist noch keiner Gruppe zugeordnet. Die Lehrkraft teilt dich gleich ein.</div>`;
   const posts = (cat) => Object.values(POST).filter((p) => p.round === 1 && p.cat === cat);
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <${GroupHeader} g=${g}><p class="muted small">Ihr seid für ${g.cats.length > 1 ? 'diese Kategorien' : 'diese Kategorie'} zuständig. Alle Gruppenmitglieder sehen live dieselbe Tabelle.</p><//>
     ${g.cats.map((cat) => html`<div class="glass pad">
       <h3>${CAT[cat].icon} Beiträge zu ${CAT[cat].name}</h3>
@@ -219,7 +219,7 @@ function Auswertung({ v, act }) {
           </span>`; })}
         </div>`)}
       </div>
-      <button class=${`btn block ${g.tallyDone ? '' : 'primary'}`} onClick=${() => { act('tallyDone', { done: !g.tallyDone }); if (!g.tallyDone) confetti(50); }}>
+      <button class=${`btn w-100 ${g.tallyDone ? '' : 'btn-primary'}`} onClick=${() => { act('tallyDone', { done: !g.tallyDone }); if (!g.tallyDone) confetti(50); }}>
         ${g.tallyDone ? '✓ Abgegeben – nochmal bearbeiten' : 'Auswertung abgeben'}
       </button>
     </div>
@@ -233,9 +233,9 @@ function AdTargeting({ adId, w, v, act }) {
   const full = w.targets.length >= v.budget;
   return html`<div class="glass ad-work">
     <div class="ad-frame"><${AdVisual} ad=${ad} /></div>
-    <div class="pad col">
+    <div class="pad bb-col">
       <h3>1 · Zu welchen Kategorien passt „${ad.label}“?</h3>
-      <div class="row wrap gap">${CATEGORIES.map((c) => html`<${CatChip} cat=${c.id} on=${w.cats.includes(c.id)} onClick=${w.done ? undefined : () => act('adCats', { adId, cat: c.id })} />`)}</div>
+      <div class="bb-row wrap gap">${CATEGORIES.map((c) => html`<${CatChip} cat=${c.id} on=${w.cats.includes(c.id)} onClick=${w.done ? undefined : () => act('adCats', { adId, cat: c.id })} />`)}</div>
       <h3>2 · Wer soll die Anzeige sehen?</h3>
       <div class="budget"><span>Budget</span><div class="budget-bar"><i style=${`width:${(w.targets.length / v.budget) * 100}%`}></i></div><b>${w.targets.length} / ${v.budget}</b></div>
       <div class="db-table" style=${`--n:${CATEGORIES.length}`}>
@@ -246,7 +246,7 @@ function AdTargeting({ adId, w, v, act }) {
           <span class="db-sum">${w.cats.length ? s : ''}</span>
         </button>`; })}
       </div>
-      <button class=${`btn block ${w.done ? '' : 'primary'}`} disabled=${!w.done && (!w.targets.length || !w.cats.length)} onClick=${() => { act('adDone', { adId, done: !w.done }); if (!w.done) confetti(60); }}>
+      <button class=${`btn w-100 ${w.done ? '' : 'btn-primary'}`} disabled=${!w.done && (!w.targets.length || !w.cats.length)} onClick=${() => { act('adDone', { adId, done: !w.done }); if (!w.done) confetti(60); }}>
         ${w.done ? '✓ Geschaltet – zurückziehen' : `🚀 Anzeige an ${w.targets.length} Personen ausspielen`}
       </button>
     </div>
@@ -256,7 +256,7 @@ function AdTargeting({ adId, w, v, act }) {
 function Werbung({ v, act }) {
   const g = v.group;
   if (!g) return html`<div class="glass pad">Du bist noch keiner Gruppe zugeordnet.</div>`;
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <${GroupHeader} g=${g}><p class="muted small">Die Tabelle ist eure gemeinsame Datenbank aus Schritt 2 (alle Gruppen). Hervorgehobene Spalten = eure gewählten Kategorien.</p><//>
     ${g.ads.map((a) => v.adWork[a] && html`<${AdTargeting} key=${a} adId=${a} w=${v.adWork[a]} v=${v} act=${act} />`)}
   </section>`;
@@ -264,8 +264,8 @@ function Werbung({ v, act }) {
 
 function RateButtons({ adId, value, act }) {
   return html`<div class="rate">
-    <button class=${`btn ${value === 1 ? 'ok' : ''}`} onClick=${() => act('rate', { adId, value: value === 1 ? 0 : 1 })}>👍 Passt zu mir</button>
-    <button class=${`btn ${value === -1 ? 'bad-on' : ''}`} onClick=${() => act('rate', { adId, value: value === -1 ? 0 : -1 })}>👎 Passt nicht</button>
+    <button class=${`btn ${value === 1 ? 'btn-success' : ''}`} onClick=${() => act('rate', { adId, value: value === 1 ? 0 : 1 })}>👍 Passt zu mir</button>
+    <button class=${`btn ${value === -1 ? 'btn-danger' : ''}`} onClick=${() => act('rate', { adId, value: value === -1 ? 0 : -1 })}>👎 Passt nicht</button>
   </div>`;
 }
 
@@ -274,7 +274,7 @@ function Empfang({ v, act }) {
   const other = ADS.map((a) => a.id).filter((id) => !rec.includes(id));
   const all = ADS.every((a) => v.ratings[a.id] != null);
   useEffect(() => { if (all) confetti(50); }, [all]);
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <div class="glass pad"><h3>📬 Dein Feed – jetzt mit Werbung</h3><p class="muted small">${rec.length ? `Du hast ${rec.length} Anzeige${rec.length > 1 ? 'n' : ''} bekommen.` : 'Dir wurde keine Anzeige ausgespielt.'} Bewerte ehrlich, ob sie zu dir passen.</p></div>
     ${rec.map((id) => html`<article class="post card" key=${id}>
       <div class="post-head"><span class="page-av">${AD[id].art[0]}</span><div class="page-meta"><b>${AD[id].brand}</b><span class="sponsored"><b>Gesponsert</b></span></div></div>
@@ -297,7 +297,7 @@ const fmtS = (ms) => { const s = Math.round(ms / 1000); return s >= 60 ? `${Math
 function Profil({ v, act }) {
   const pr = v.profile;
   const st = pr.stats;
-  return html`<section class="col stagger">
+  return html`<section class="bb-col stagger">
     <div class="glass pad reveal-head">
       <span class="kicker">Vertraulich · nur für dich</span>
       <h2>Was bubbl über dich weiß</h2>
@@ -311,8 +311,8 @@ function Profil({ v, act }) {
     </div>
     <div class="glass pad">
       <h3>Dein Interessenprofil</h3>
-      <div class="legend"><span class="lg dash" style="--lc:#94a3b8">nur aus deinen Likes</span><span class="lg solid" style="--lc:#ec4899">Likes + heimliches Tracking</span></div>
-      <${Radar} series=${[{ values: pr.likesN, color: '#94a3b8', label: 'Nur Likes', dashed: true }, { values: pr.fullN, color: '#ec4899', label: 'Likes + Tracking' }]} />
+      <div class="legend"><span class="lg dash" style="--lc:#94a3b8">nur aus deinen Likes</span><span class="lg solid" style="--lc:#0C5D6A">Likes + heimliches Tracking</span></div>
+      <${Radar} series=${[{ values: pr.likesN, color: '#94a3b8', label: 'Nur Likes', dashed: true }, { values: pr.fullN, color: '#0C5D6A', label: 'Likes + Tracking' }]} />
     </div>
     ${st.secretReads.length > 0 && html`<div class="glass pad">
       <h3>🕵️ Heimlich gelesen – aber nicht geliked</h3>
@@ -333,7 +333,7 @@ function Profil({ v, act }) {
     </div>
     <${TrackingInspector} log=${v.trackLog} />
     <${Auskunft} code=${v.code} />
-    ${pr.received.length > 0 && html`<div class="glass pad"><h3>Deshalb hast du diese Werbung bekommen</h3><div class="other-ads">${pr.received.map((id) => html`<div class="other-ad"><${AdVisual} ad=${AD[id]} compact /><div class="row wrap gap">${AD[id].cats.map((c) => html`<${CatChip} cat=${c} small />`)}</div></div>`)}</div></div>`}
+    ${pr.received.length > 0 && html`<div class="glass pad"><h3>Deshalb hast du diese Werbung bekommen</h3><div class="other-ads">${pr.received.map((id) => html`<div class="other-ad"><${AdVisual} ad=${AD[id]} compact /><div class="bb-row wrap gap">${AD[id].cats.map((c) => html`<${CatChip} cat=${c} small />`)}</div></div>`)}</div></div>`}
   </section>`;
 }
 
@@ -347,19 +347,19 @@ function Blase({ v, act }) {
   const [fresh, setFresh] = useState(0);
   useEffect(() => { if (b.feed.length > prevLen.current) setFresh(b.feed.length - prevLen.current); prevLen.current = b.feed.length; }, [b.feed.length]);
   useEffect(() => { if (!fresh) return; const t = setTimeout(() => setFresh(0), 2200); return () => clearTimeout(t); }, [fresh]);
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <div class="glass pad bubble-meter sticky-top">
-      <div class="row between"><b>🫧 Vielfalt deines Feeds</b><span class=${`status-pill ${level[0]}`}>${level[1]}</span></div>
+      <div class="bb-row between"><b>🫧 Vielfalt deines Feeds</b><span class=${`status-pill ${level[0]}`}>${level[1]}</span></div>
       <div class="mix-bar">${CATEGORIES.map((c) => d.mix[c.id] ? html`<i style=${`flex:${d.mix[c.id]};background:${c.color}`} title=${`${c.name}: ${d.mix[c.id]}`}></i>` : null)}</div>
       <small class="muted">Letzte 9 Beiträge · ${d.distinct} von 7 Themen</small>
     </div>
     ${b.feed.map((id, i) => POST[id] && html`<${Post} key=${id} post=${POST[id]} liked=${b.likes.includes(id)} canLike=${true} onLike=${() => act('like', { postId: id })} onOpen=${setOpen}
       note=${i >= 6 ? html`<span class="for-you">✨ Für dich</span>` : null} />`)}
-    <div class="row gap more-row">
-      <button class="btn primary" onClick=${() => act('more', {})}>Mehr laden</button>
+    <div class="bb-row gap more-row">
+      <button class="btn btn-primary" onClick=${() => act('more', {})}>Mehr laden</button>
       <button class="btn" onClick=${() => act('more', { explore: true })}>🔀 Etwas Neues entdecken</button>
     </div>
-    ${fresh > 0 && html`<div class="toast">✨ ${fresh} neue Beiträge – passend zu deinen Likes</div>`}
+    ${fresh > 0 && html`<div class="bb-toast">✨ ${fresh} neue Beiträge – passend zu deinen Likes</div>`}
     ${open && html`<${ArticleSheet} post=${open} onClose=${() => setOpen(null)} liked=${b.likes.includes(open.id)} canLike=${true} onLike=${() => act('like', { postId: open.id })} />`}
   </section>`;
 }
@@ -368,7 +368,7 @@ function Wahl({ v, act }) {
   const w = v.wahl;
   const msg = PARTY_MESSAGES[w.cat];
   const faces = ['😠', '🙁', '😐', '🙂', '😍'];
-  return html`<section class="col stagger">
+  return html`<section class="bb-col stagger">
     <article class="post card">
       <div class="post-head"><span class="page-av">${PARTY.logo}</span><div class="page-meta"><b>${PARTY.name} <span class="verified">✓</span></b><span class="sponsored"><b>Gesponsert</b> · Politische Werbung</span></div></div>
       <div class="party-visual"><span>${msg.art}</span><h2>${msg.title}</h2></div>
@@ -396,14 +396,14 @@ function Reflexion({ v, act }) {
   const timer = useRef(null);
   const send = (data) => { clearTimeout(timer.current); timer.current = setTimeout(() => { act('reflect', data); setSaved(true); setTimeout(() => setSaved(false), 1500); }, 500); };
   const opts = [['😡', 'sehr schlecht'], ['🙁', 'eher schlecht'], ['😐', 'teils, teils'], ['🙂', 'eher gut'], ['🤩', 'sehr gut']];
-  return html`<section class="col stagger">
+  return html`<section class="bb-col stagger">
     <div class="glass pad">
       <h3>Personalisierte Werbung finde ich …</h3>
       <div class="scale">${opts.map(([f, l], i) => html`<button class=${`scale-btn ${r.opinion === i + 1 ? 'on' : ''}`} onClick=${() => act('reflect', { opinion: i + 1 })}><span>${f}</span><small>${l}</small></button>`)}</div>
     </div>
-    <div class="glass pad col">
-      <label class="lbl">👍 Ein Vorteil von Microtargeting:<textarea class="field" maxlength="140" rows="2" value=${pro} onInput=${(e) => { setPro(e.target.value); send({ pro: e.target.value }); }} placeholder="z. B. Ich sehe Werbung, die mich interessiert …"></textarea></label>
-      <label class="lbl">👎 Ein Nachteil / eine Gefahr:<textarea class="field" maxlength="140" rows="2" value=${con} onInput=${(e) => { setCon(e.target.value); send({ con: e.target.value }); }} placeholder="z. B. Parteien können Leute manipulieren …"></textarea></label>
+    <div class="glass pad bb-col">
+      <label class="lbl">👍 Ein Vorteil von Microtargeting:<textarea class="form-control" maxlength="140" rows="2" value=${pro} onInput=${(e) => { setPro(e.target.value); send({ pro: e.target.value }); }} placeholder="z. B. Ich sehe Werbung, die mich interessiert …"></textarea></label>
+      <label class="lbl">👎 Ein Nachteil / eine Gefahr:<textarea class="form-control" maxlength="140" rows="2" value=${con} onInput=${(e) => { setCon(e.target.value); send({ con: e.target.value }); }} placeholder="z. B. Parteien können Leute manipulieren …"></textarea></label>
       <small class="muted">${saved ? '✓ gespeichert – erscheint auf dem Beamer (ohne Namen)' : 'Wird automatisch gespeichert und anonym auf dem Beamer gezeigt.'}</small>
     </div>
   </section>`;
@@ -414,11 +414,11 @@ function Join({ onJoin, error }) {
   const [av, setAv] = useState(AVATARS[Math.floor(Math.random() * AVATARS.length)]);
   return html`<main class="join stagger">
     <${Logo} size=${46} />
-    <div class="glass pad col">
+    <div class="glass pad bb-col">
       <h2>Willkommen bei bubbl!</h2>
       <p class="muted">Raum <b class="code">${code}</b>. Wähle ein Profilbild – deinen Namen brauchen wir nicht.</p>
       <div class="avatar-grid">${AVATARS.map((a) => html`<button class=${`av-pick ${a === av ? 'on' : ''}`} onClick=${() => setAv(a)}>${a}</button>`)}</div>
-      <button class="btn primary block" onClick=${() => onJoin(av)}>Profil erstellen →</button>
+      <button class="btn btn-primary w-100" onClick=${() => onJoin(av)}>Profil erstellen →</button>
       ${error && html`<p class="error">${error}</p>`}
     </div>
     <small class="muted center">Mit dem Beitritt stimmst du zu, dass bubbl alles misst, was du tust. 😉</small>
@@ -433,7 +433,7 @@ function App() {
   useEffect(() => { if (v) { tracker.start(act); tracker.active = ['feed', 'blase', 'empfang'].includes(v.phase); } }, [v?.phase]);
 
   if (!code) { location.replace('/'); return null; }
-  if (status === 'error') return html`<${Aurora} /><main class="join"><${Logo} size=${40} /><div class="glass pad col center"><h2>Hoppla</h2><p>${error}</p><a class="btn" href="/">Zur Startseite</a></div></main>`;
+  if (status === 'error') return html`<${Aurora} /><main class="join"><${Logo} size=${40} /><div class="glass pad bb-col center"><h2>Hoppla</h2><p>${error}</p><a class="btn" href="/">Zur Startseite</a></div></main>`;
   if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(av) => { joinRef.current = av; sock.current?.greet(); }} />`;
   if (!v) return html`<${Aurora} /><main class="join"><${Logo} size=${46} /><div class="loader"><span class="dots"><i></i><i></i><i></i></span></div></main>`;
 

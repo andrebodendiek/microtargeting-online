@@ -123,7 +123,7 @@ function cleanItems(raw, content) {
   return out;
 }
 
-export async function generateSuggestions({ mode = 'refresh', topic = '', scope = [], content }) {
+export async function generateSuggestions({ mode = 'refresh', topic = '', scope = [], content, signal }) {
   const client = new Anthropic({ timeout: 10 * 60 * 1000 });
   const messages = [{ role: 'user', content: `${taskText({ mode, topic, scope })}\n\nAktueller Bestand (gekürzt):\n${JSON.stringify(compactContent(content))}` }];
   const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }, SUBMIT_TOOL];
@@ -138,7 +138,7 @@ export async function generateSuggestions({ mode = 'refresh', topic = '', scope 
       system: SYSTEM,
       tools,
       messages,
-    });
+    }, { signal });
     const msg = await stream.finalMessage();
     if (msg.stop_reason === 'refusal') throw new Error('Die KI hat diese Anfrage abgelehnt. Bitte das Thema anders formulieren.');
     if (msg.stop_reason === 'max_tokens') throw new Error('Die Antwort der KI war zu lang. Bitte den Umfang verkleinern.');

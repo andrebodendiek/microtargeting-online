@@ -38,7 +38,7 @@ export function validatePost(p, i = 0) {
   if (!p || typeof p !== 'object') throw new Invalid(`${f}: ungültig`);
   if (!ID.test(p.id || '')) throw new Invalid(`${f}: ungültige ID`);
   if (!CAT_IDS.has(p.cat)) throw new Invalid(`${f}: unbekannte Kategorie`);
-  if (!PAGES[p.page]) throw new Invalid(`${f}: unbekannte Seite`);
+  if (!Object.hasOwn(PAGES, p.page)) throw new Invalid(`${f}: unbekannte Seite`);
   return {
     id: p.id, cat: p.cat, page: p.page, round: p.round === 2 ? 2 : 1,
     time: str(p.time || '1 Std.', 14, `${f} Zeit`), art: emojiList(p.art, `${f} Bild`), bg: colors(p.bg, `${f} Farben`),

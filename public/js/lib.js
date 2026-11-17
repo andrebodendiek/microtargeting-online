@@ -75,8 +75,8 @@ export function TeacherLogin({ onSuccess, configured = true, compact }) {
   if (!configured) return html`<p class="login-note">🔒 Der Lehrkraft-Zugang ist noch nicht eingerichtet. Auf dem Server muss die Umgebungsvariable <code>TEACHER_PASSWORD</code> gesetzt werden.</p>`;
   return html`<form class=${`login ${compact ? 'compact' : ''}`} onSubmit=${submit}>
     ${!compact && html`<p class="login-note">🔒 Nur für Lehrkräfte. Bitte mit dem Lehrkraft-Passwort anmelden.</p>`}
-    <input class="field" type="password" autocomplete="current-password" placeholder="Lehrkraft-Passwort" value=${pw} onInput=${(e) => setPw(e.target.value)} aria-label="Lehrkraft-Passwort" required />
-    <button class="btn primary block" disabled=${busy || !pw}>${busy ? 'Prüfe …' : 'Anmelden'}</button>
+    <input class="form-control" type="password" autocomplete="current-password" placeholder="Lehrkraft-Passwort" value=${pw} onInput=${(e) => setPw(e.target.value)} aria-label="Lehrkraft-Passwort" required />
+    <button class="btn btn-primary w-100" disabled=${busy || !pw}>${busy ? 'Prüfe …' : 'Anmelden'}</button>
     ${err && html`<p class="login-err">${err}</p>`}
   </form>`;
 }
@@ -169,9 +169,9 @@ export function CountUp({ value, dur = 650, format = (v) => Math.round(v).toLoca
 
 export function Progress({ done, total, label, big }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
-  return html`<div class=${`progress ${big ? 'big' : ''}`}>
-    <div class="progress-bar"><i style=${`width:${pct}%`}></i></div>
-    <span class="progress-label"><b>${done}</b> / ${total} ${label}</span>
+  return html`<div class=${`bb-progress ${big ? 'big' : ''}`}>
+    <div class="bb-progress-bar"><i style=${`width:${pct}%`}></i></div>
+    <span class="bb-progress-label"><b>${done}</b> / ${total} ${label}</span>
   </div>`;
 }
 
@@ -234,7 +234,7 @@ export function confetti(n = 80) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const host = document.createElement('div');
   host.className = 'confetti';
-  const colors = ['#7c3aed', '#ec4899', '#f59e0b', '#22c55e', '#3b82f6'];
+  const colors = ['#0C5D6A', '#1FB0C7', '#25b232', '#f59e0b', '#2d3133'];
   for (let i = 0; i < n; i++) {
     const s = document.createElement('i');
     s.style.cssText = `left:${Math.random() * 100}%;background:${colors[i % colors.length]};animation-delay:${Math.random() * 0.4}s;animation-duration:${1.6 + Math.random() * 1.4}s;transform:rotate(${Math.random() * 360}deg)`;

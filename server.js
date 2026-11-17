@@ -8,7 +8,7 @@ import { Store } from './src/store.js';
 import * as G from './src/game.js';
 import { DEFAULT_CONTENT } from './public/shared/content.js';
 import { createAuth } from './src/auth.js';
-import { ContentStore, applyItems, Invalid } from './src/content-store.js';
+import { ContentStore, applyItems, Invalid, validateContent } from './src/content-store.js';
 import { generateSuggestions, aiAvailable, AI_MODEL } from './src/ai.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,16 +17,39 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const store = new Store(DATA_DIR);
 const content = new ContentStore(DATA_DIR);
+// Befund 3: Inhaltspakete gespeicherter Räume prüfen – ungültige fallen auf den Standard zurück
+for (const room of store.rooms.values()) {
+  if (!room.content) continue;
+  try { room.content = validateContent(room.content); } catch (e) { console.warn(`Raum ${room.code}: Inhaltspaket ungültig (${e.message}) – nutze Standardinhalte`); room.content = null; }
+}
 const auth = createAuth({ password: process.env.TEACHER_PASSWORD, secret: process.env.SESSION_SECRET });
 if (!auth.configured) console.warn('⚠️  TEACHER_PASSWORD ist nicht gesetzt – der Lehrkraft-Bereich ist gesperrt, bis ein Passwort konfiguriert ist.');
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', true);
-app.use(express.json({ limit: '32kb' }));
+// Nur so viele Proxy-Hops vertrauen, wie wirklich davor stehen (CapRover/nginx: 1) –
+// sonst ließe sich die IP per X-Forwarded-For fälschen und jede Bremse umgehen.
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+// Befund 4: großer Body nur für das Speichern im Editor, sonst 32 kB
+app.use((req, res, next) => (req.path === '/api/content' && req.method === 'PUT' ? express.json({ limit: '1mb' }) : express.json({ limit: '32kb' }))(req, res, next));
+
+// Einfache Zeitfenster-Bremse mit automatischem Aufräumen
+const buckets = new Map();
+function hit(key, max, windowMs) {
+  const now = Date.now();
+  const list = (buckets.get(key) || []).filter((t) => now - t < windowMs);
+  if (list.length >= max) { buckets.set(key, list); return false; }
+  list.push(now); buckets.set(key, list); return true;
+}
+const peek = (key, windowMs) => (buckets.get(key) || []).filter((t) => Date.now() - t < windowMs).length;
+setInterval(() => { const now = Date.now(); for (const [k, l] of buckets) if (!l.length || now - l[l.length - 1] > 30 * 60_000) buckets.delete(k); }, 5 * 60_000).unref();
+process.on('unhandledRejection', (e) => console.error('Unbehandelter Fehler:', e));
+process.on('uncaughtException', (e) => console.error('Unerwarteter Fehler:', e));
 
 const nm = (p) => path.join(__dirname, 'node_modules', p);
 app.use('/vendor/preact', express.static(nm('preact'), { maxAge: '7d' }));
 app.use('/vendor/htm', express.static(nm('htm'), { maxAge: '7d' }));
+app.use('/vendor/bootstrap', express.static(nm('bootstrap/dist'), { maxAge: '7d' }));
+app.use('/vendor/bootstrap-icons', express.static(nm('bootstrap-icons/font'), { maxAge: '7d' }));
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], maxAge: '5m' }));
 
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
@@ -36,22 +59,20 @@ const requireTeacher = (req, res, next) => {
   if (auth.isTeacher(req.headers.cookie)) return next();
   res.status(401).json({ error: auth.configured ? 'Bitte als Lehrkraft anmelden.' : 'Lehrkraft-Zugang ist auf dem Server nicht eingerichtet (TEACHER_PASSWORD fehlt).' });
 };
-const loginLimiter = new Map();
 app.get('/api/me', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ teacher: auth.isTeacher(req.headers.cookie), configured: auth.configured });
 });
 app.post('/api/login', (req, res) => {
   const ip = req.ip || 'x';
-  const now = Date.now();
-  const hits = (loginLimiter.get(ip) || []).filter((t) => now - t < 5 * 60_000);
-  if (hits.length >= 8) return res.status(429).json({ error: 'Zu viele Versuche. Bitte in ein paar Minuten erneut probieren.' });
+  const tooMany = { error: 'Zu viele Versuche. Bitte in ein paar Minuten erneut probieren.' };
+  if (peek(`login:${ip}`, 5 * 60_000) >= 8 || peek('login:all', 15 * 60_000) >= 60) return res.status(429).json(tooMany);
   if (!auth.configured) return res.status(503).json({ error: 'Lehrkraft-Zugang ist auf dem Server nicht eingerichtet (TEACHER_PASSWORD fehlt).' });
   if (!auth.checkPassword(req.body?.password)) {
-    hits.push(now); loginLimiter.set(ip, hits);
+    hit(`login:${ip}`, 8, 5 * 60_000); hit('login:all', 60, 15 * 60_000); // auch global, falls viele IPs probieren
     return res.status(401).json({ error: 'Falsches Passwort.' });
   }
-  loginLimiter.delete(ip);
+  buckets.delete(`login:${ip}`);
   res.setHeader('Set-Cookie', auth.cookieFor(req.secure));
   res.json({ ok: true });
 });
@@ -61,25 +82,22 @@ app.post('/api/logout', (req, res) => {
 });
 
 // Neuen Raum anlegen (Lehrkraft)
-const createLimiter = new Map();
 app.post('/api/rooms', requireTeacher, (req, res) => {
-  const ip = req.ip || 'x';
-  const now = Date.now();
-  const hits = (createLimiter.get(ip) || []).filter((t) => now - t < 60_000);
-  if (hits.length >= 10) return res.status(429).json({ error: 'Zu viele Räume in kurzer Zeit.' });
-  hits.push(now); createLimiter.set(ip, hits);
+  if (!hit(`create:${req.ip}`, 10, 60_000)) return res.status(429).json({ error: 'Zu viele Räume in kurzer Zeit.' });
   const room = G.createRoom(G.newCode((c) => store.has(c)), content.current);
   store.add(room);
   res.json({ code: room.code, key: room.key });
 });
 
 app.get('/api/rooms/:code', (req, res) => {
+  if (!hit(`lookup:${req.ip}`, 30, 60_000)) return res.status(429).json({ error: 'Zu viele Versuche. Kurz warten.' });
   const room = store.get(req.params.code);
   if (!room) return res.status(404).json({ error: 'Raum nicht gefunden' });
   res.json({ code: room.code, phase: room.phase });
 });
 
 app.post('/api/rooms/:code/auskunft', (req, res) => {
+  if (!hit(`auskunft:${req.ip}`, 30, 60_000)) return res.status(429).json({ error: 'Zu viele Anfragen.' });
   const room = store.get(req.params.code);
   const p = room && Object.values(room.players).find((x) => x.token && x.token === req.body?.token && !x.kicked);
   if (!p) return res.status(403).json({ error: 'Kein Zugriff' });
@@ -120,7 +138,9 @@ function startAiJob({ mode, topic, scope, source }) {
   aiLimiter.push(now);
   const job = { id: G.rid(6), status: 'running', startedAt: now, mode, topic };
   jobs.set(job.id, job);
-  generateSuggestions({ mode, topic, scope, content: content.current })
+  const abort = new AbortController();
+  const killer = setTimeout(() => abort.abort(), 8 * 60 * 1000);
+  generateSuggestions({ mode, topic, scope, content: content.current, signal: abort.signal })
     .then((r) => {
       const set = { id: G.rid(6), createdAt: Date.now(), source, mode, topic, summary: r.summary, items: r.items };
       content.addSuggestionSet(set);
@@ -129,7 +149,8 @@ function startAiJob({ mode, topic, scope, source }) {
         try { content.save(applyItems(content.current, set.items), 'Automatisch übernommen (KI)', 'KI-Automatik'); set.items.forEach((i) => { i.status = 'applied'; }); content.persist(); } catch (e) { console.error('Auto-Übernahme fehlgeschlagen:', e.message); }
       }
     })
-    .catch((e) => { job.status = 'error'; job.error = e?.message || 'Fehler bei der KI-Anfrage'; console.error('KI-Fehler:', e?.message); })
+    .catch((e) => { job.status = 'error'; job.error = abort.signal.aborted ? 'Die KI hat zu lange gebraucht (über 8 Minuten). Bitte erneut versuchen.' : (e?.message || 'Fehler bei der KI-Anfrage'); console.error('KI-Fehler:', e?.message); })
+    .finally(() => clearTimeout(killer))
     .finally(() => setTimeout(() => jobs.delete(job.id), 60 * 60 * 1000).unref());
   return job;
 }
@@ -181,8 +202,10 @@ setInterval(() => {
   if (a.schedule === 'off' || !aiAvailable()) return;
   const every = a.schedule === 'weekly' ? 7 : 30;
   if (Date.now() - (a.lastRun || 0) < every * 24 * 3600 * 1000) return;
-  a.lastRun = Date.now(); content.persist();
-  try { startAiJob({ mode: 'refresh', topic: a.focus, scope: [], source: 'auto' }); } catch (e) { console.error('Automatik:', e.message); }
+  try {
+    startAiJob({ mode: 'refresh', topic: a.focus, scope: [], source: 'auto' });
+    a.lastRun = Date.now(); content.persist(); // erst nach erfolgreichem Start merken
+  } catch (e) { console.error('Automatik:', e.message); }
 }, 60 * 60 * 1000).unref();
 
 app.get('/api/qr.svg', async (req, res) => {
@@ -205,7 +228,7 @@ function schedule(room, { players = true } = {}) {
   if (cur) { cur.players ||= players; return; }
   const entry = { players };
   pending.set(room.code, entry);
-  setTimeout(() => { pending.delete(room.code); broadcast(room, entry.players); }, 120);
+  setTimeout(() => { pending.delete(room.code); broadcast(room, entry.players).catch((e) => console.error('Broadcast fehlgeschlagen:', room.code, e)); }, 120);
 }
 function emitIfChanged(sock, view) {
   const s = JSON.stringify(view);
@@ -219,16 +242,19 @@ async function broadcast(room, includePlayers) {
   let staff = null, beamer = null;
   for (const s of socks) {
     const sock = io.sockets.sockets.get(s.id);
-    if (!sock) continue;
+    // Befund 1: nur Sockets, die wirklich (noch) zu diesem Raum gehören
+    if (!sock || sock.data?.code !== room.code) continue;
     const role = sock.data.role;
-    G.useContent(room);
-    if (role === 'teacher') emitIfChanged(sock, staff ||= G.staffView(room));
-    else if (role === 'beamer') emitIfChanged(sock, beamer ||= G.staffView(room, { forBeamer: true }));
-    else if (role === 'player' && includePlayers) {
-      const p = room.players[sock.data.pid];
-      if (!p || p.kicked) { sock.emit('kicked'); sock.disconnect(true); continue; }
-      emitIfChanged(sock, G.playerView(room, p));
-    }
+    try {
+      G.useContent(room);
+      if (role === 'teacher') emitIfChanged(sock, staff ||= G.staffView(room));
+      else if (role === 'beamer') emitIfChanged(sock, beamer ||= G.staffView(room, { forBeamer: true }));
+      else if (role === 'player' && includePlayers) {
+        const p = Object.hasOwn(room.players, sock.data.pid) ? room.players[sock.data.pid] : null;
+        if (!p || p.kicked) { sock.emit('kicked'); sock.disconnect(true); continue; }
+        emitIfChanged(sock, G.playerView(room, p));
+      }
+    } catch (e) { console.error('Ansicht fehlgeschlagen:', room.code, role, e); }
   }
 }
 
@@ -244,8 +270,13 @@ io.on('connection', (sock) => {
 
   sock.on('hello', (msg, ack) => {
     const reply = typeof ack === 'function' ? ack : () => {};
+    const ip = sock.handshake.address || 'x';
+    if (!hit(`hello:${sock.id}`, 10, 60_000)) return reply({ error: 'Zu viele Anmeldeversuche. Bitte Seite neu laden.' });
     const room = store.get(msg?.code);
-    if (!room) return reply({ error: 'Raum nicht gefunden. Code prüfen!' });
+    if (!room) { hit(`badcode:${ip}`, 1e9, 60_000); return reply({ error: 'Raum nicht gefunden. Code prüfen!' }); }
+    if (peek(`badcode:${ip}`, 60_000) > 30) return reply({ error: 'Zu viele Versuche. Kurz warten.' });
+    // Ein Socket gehört immer nur zu genau einem Raum
+    if (sock.data?.code && sock.data.code !== room.code) sock.leave(sock.data.code);
     const role = msg.role;
     if (role === 'teacher' || role === 'beamer') {
       if (!auth.isTeacher(sock.handshake.headers.cookie)) return reply({ error: 'Bitte als Lehrkraft anmelden.', auth: true });
@@ -256,10 +287,11 @@ io.on('connection', (sock) => {
       if (p?.kicked) return reply({ error: 'Du wurdest aus dem Raum entfernt.' });
       if (!p) {
         if (!msg.join) return reply({ needJoin: true });
+        if (sock.data?.joined || !hit(`join:${ip}`, 80, 10 * 60_000)) return reply({ error: 'Zu viele neue Profile von diesem Gerät/Netz. Bitte kurz warten.' });
         if (Object.values(room.players).filter((x) => !x.kicked).length >= 60) return reply({ error: 'Der Raum ist voll.' });
         p = G.actions.join(room, null, { avatar: msg.avatar });
       }
-      sock.data = { code: room.code, role: 'player', pid: p.id };
+      sock.data = { code: room.code, role: 'player', pid: p.id, joined: true };
       reply({ ok: true, token: p.token, id: p.id });
     }
     if (sock.data.role !== 'player') reply({ ok: true });
@@ -293,7 +325,8 @@ io.on('connection', (sock) => {
     const room = store.get(sock.data?.code);
     const reply = typeof ack === 'function' ? ack : () => {};
     if (!room || sock.data.role !== 'teacher') return reply({ error: 'Kein Zugriff' });
-    if (room.phase !== 'lobby') return reply({ error: 'Nur in der Lobby möglich.' });
+    const started = room.groups || Object.values(room.players).some((p) => p.likes.length || Object.keys(p.ratings).length || p.track.events) || Object.keys(room.quiz?.answers || {}).length;
+    if (room.phase !== 'lobby' || started) return reply({ error: 'Nur vor Spielbeginn möglich. Tipp: unter „Raum verwalten“ zuerst „Neue Runde“ starten.' });
     room.content = JSON.parse(JSON.stringify(content.current));
     io.in(room.code).emit('content', room.content);
     for (const s of io.sockets.sockets.values()) if (s.data?.code === room.code) s.data.last = null;

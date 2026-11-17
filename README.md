@@ -47,6 +47,8 @@ Datenschutz: keine Namen, keine Accounts. SuS sind nur über Nummer und Tier-Ava
 
 ## Technik
 - Node.js 22, Express, Socket.IO (Echtzeit), Preact + htm ohne Build-Schritt
+- Layout: **Bootstrap 5.3 + Bootstrap Icons** (lokal ausgeliefert, kein CDN), gestaltet nach der Design-Sprache von GrandNode (Petrol `#0C5D6A`, Türkis `#1FB0C7`) – es wird kein GrandNode-Code (GPL) verwendet
+- Schutzmaßnahmen: ein Raum pro Verbindung, Bremsen für Login (pro IP und global), Beitritte, Raumcode-Suche und Auskunft; IDs und Schlüssel werden strikt geprüft (keine Prototyp-Schlüssel), fehlerhafte Inhaltspakete fallen auf den Standard zurück, Fehler in einzelnen Ansichten bringen den Server nicht zum Absturz
 - Persistenz: ein JSON-Dokument pro Raum in `DATA_DIR/rooms` (atomar geschrieben)
 - Lokal starten: `npm install && TEACHER_PASSWORD=test npm start` → http://localhost:3000
 - Tests: `npm test`
@@ -62,7 +64,7 @@ Das Repo enthält `captain-definition` und `Dockerfile`.
 
 5. *App Configs → Environmental Variables*: **`TEACHER_PASSWORD`** = euer Lehrkraft-Passwort (**Pflicht** – ohne diese Variable ist der Lehrkraft-Bereich gesperrt) und **`ANTHROPIC_API_KEY`** = API-Schlüssel von console.anthropic.com (optional, nur für den KI-Assistenten). Danach „Save & Update“.
 
-Weitere Umgebungsvariablen (optional): `SESSION_SECRET` (zusätzlicher Geheimwert für die Anmelde-Cookies), `PORT` (Standard 3000), `DATA_DIR` (Standard `/data` im Container).
+Weitere Umgebungsvariablen (optional): `SESSION_SECRET` (zusätzlicher Geheimwert für die Anmelde-Cookies), `TRUST_PROXY` (Anzahl vorgeschalteter Proxys, Standard 1 = CapRover/nginx; wichtig für korrekte Login-Bremsen), `PORT` (Standard 3000), `DATA_DIR` (Standard `/data` im Container).
 
 Lokal: `TEACHER_PASSWORD=test npm start`.
 

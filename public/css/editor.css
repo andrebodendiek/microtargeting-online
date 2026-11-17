@@ -20,7 +20,7 @@
 .ed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
 .ed-field { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 13px; }
 .ed-field small { font-weight: 500; }
-.ed-field .field { padding: 8px 10px; border-radius: 10px; font-weight: 500; font-size: 14px; }
+.ed-field .form-control { padding: 8px 10px; border-radius: 10px; font-weight: 500; font-size: 14px; }
 .emoji-in { font-size: 18px !important; letter-spacing: 0.2em; }
 .colors { display: flex; gap: 6px; }
 .colors input { width: 48px; height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 2px; background: var(--field); }

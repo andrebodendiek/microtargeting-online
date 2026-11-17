@@ -15,12 +15,12 @@ const splitEmoji = (s) => [...new Intl.Segmenter('de', { granularity: 'grapheme'
 // ------------------------------------------------------------------ Formular-Bausteine
 const Field = ({ label, children, hint }) => html`<label class="ed-field"><span>${label}${hint && html`<small class="muted"> · ${hint}</small>`}</span>${children}</label>`;
 const Text = ({ value, onInput, max, area, rows = 2 }) => area
-  ? html`<textarea class="field" rows=${rows} maxlength=${max} value=${value || ''} onInput=${(e) => onInput(e.target.value)}></textarea>`
-  : html`<input class="field" maxlength=${max} value=${value || ''} onInput=${(e) => onInput(e.target.value)} />`;
-const Emojis = ({ value, onInput, max = 3 }) => html`<input class="field emoji-in" value=${(value || []).join(' ')} onInput=${(e) => onInput(splitEmoji(e.target.value).slice(0, max))} placeholder="z. B. 🎮 🏆" />`;
+  ? html`<textarea class="form-control" rows=${rows} maxlength=${max} value=${value || ''} onInput=${(e) => onInput(e.target.value)}></textarea>`
+  : html`<input class="form-control" maxlength=${max} value=${value || ''} onInput=${(e) => onInput(e.target.value)} />`;
+const Emojis = ({ value, onInput, max = 3 }) => html`<input class="form-control emoji-in" value=${(value || []).join(' ')} onInput=${(e) => onInput(splitEmoji(e.target.value).slice(0, max))} placeholder="z. B. 🎮 🏆" />`;
 const Colors = ({ value, onInput }) => html`<span class="colors">${[0, 1].map((i) => html`<input type="color" value=${value?.[i] || '#cccccc'} onInput=${(e) => { const n = [...(value || ['#cccccc', '#cccccc'])]; n[i] = e.target.value; onInput(n); }} />`)}</span>`;
-const CatPick = ({ value = [], onInput, max = 3 }) => html`<div class="row wrap gap">${CATEGORIES.map((c) => html`<${CatChip} cat=${c.id} small on=${value.includes(c.id)} onClick=${() => onInput(value.includes(c.id) ? value.filter((x) => x !== c.id) : [...value, c.id].slice(-max))} />`)}</div>`;
-const Select = ({ value, onInput, options }) => html`<select class="field" value=${value} onChange=${(e) => onInput(e.target.value)}>${options.map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select>`;
+const CatPick = ({ value = [], onInput, max = 3 }) => html`<div class="bb-row wrap gap">${CATEGORIES.map((c) => html`<${CatChip} cat=${c.id} small on=${value.includes(c.id)} onClick=${() => onInput(value.includes(c.id) ? value.filter((x) => x !== c.id) : [...value, c.id].slice(-max))} />`)}</div>`;
+const Select = ({ value, onInput, options }) => html`<select class="form-select" value=${value} onChange=${(e) => onInput(e.target.value)}>${options.map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select>`;
 const move = (arr, i, d) => { const a = arr.slice(); const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; };
 
 // ------------------------------------------------------------------ Tabs
@@ -30,8 +30,8 @@ function PostsTab({ c, set }) {
   const upd = (id, patch) => set({ ...c, posts: c.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const list = c.posts.filter((p) => cat === 'all' || p.cat === cat);
   const add = () => { const id = uid('p'); const nc = cat === 'all' ? 'technik' : cat; set({ ...c, posts: [...c.posts, { id, cat: nc, page: Object.keys(PAGES).find((k) => PAGES[k].cat === nc) || 'norden', round: 1, time: '1 Std.', art: ['✨'], bg: ['#a1c4fd', '#c2e9fb'], headline: 'Neue Überschrift', teaser: 'Anreißer …', body: 'Weiterer Text.' }] }); setOpen(id); };
-  return html`<div class="col">
-    <div class="row wrap gap"><button class=${`chip ${cat === 'all' ? 'on-all' : ''}`} onClick=${() => setCat('all')}>Alle (${c.posts.length})</button>
+  return html`<div class="bb-col">
+    <div class="bb-row wrap gap"><button class=${`chip ${cat === 'all' ? 'on-all' : ''}`} onClick=${() => setCat('all')}>Alle (${c.posts.length})</button>
       ${CATEGORIES.map((x) => html`<${CatChip} cat=${x.id} small on=${cat === x.id} count=${c.posts.filter((p) => p.cat === x.id && p.round === 1).length} onClick=${() => setCat(x.id)} />`)}</div>
     <p class="muted small">Zahl = Beiträge in Runde 1 (Feed beim Liken, mind. 2 je Kategorie). Runde 2 = zusätzliche Beiträge für die Filterblase.</p>
     ${list.map((p) => html`<div class=${`ed-item ${open === p.id ? 'open' : ''}`} key=${p.id}>
@@ -51,7 +51,7 @@ function PostsTab({ c, set }) {
         <${Field} label="Überschrift"><${Text} value=${p.headline} max=${100} onInput=${(v) => upd(p.id, { headline: v })} /><//>
         <${Field} label="Anreißer"><${Text} area value=${p.teaser} max=${360} onInput=${(v) => upd(p.id, { teaser: v })} /><//>
         <${Field} label="Weiterlesen-Text"><${Text} area rows=${3} value=${p.body} max=${700} onInput=${(v) => upd(p.id, { body: v })} /><//>
-        <button class="btn small danger" onClick=${() => set({ ...c, posts: c.posts.filter((x) => x.id !== p.id) })}>🗑 Beitrag löschen</button>
+        <button class="btn btn-sm btn-outline-danger" onClick=${() => set({ ...c, posts: c.posts.filter((x) => x.id !== p.id) })}><i class="bi bi-trash"></i> Beitrag löschen</button>
       </div>`}
     </div>`)}
     <button class="btn" onClick=${add}>+ Beitrag hinzufügen</button>
@@ -78,7 +78,7 @@ function AdForm({ a, upd, withCats = true }) {
 function AdsTab({ c, set }) {
   const [open, setOpen] = useState(null);
   const upd = (id, patch) => set({ ...c, ads: c.ads.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
-  return html`<div class="col">
+  return html`<div class="bb-col">
     <p class="muted small">Reihenfolge zählt: Anzeigen 1–4 sind in der Algorithmus-Werkbank die <b>Trainingsdaten</b>, die übrigen die <b>Testdaten</b>. 5–8 Anzeigen.</p>
     ${c.ads.map((a, i) => html`<div class=${`ed-item ${open === a.id ? 'open' : ''}`} key=${a.id}>
       <div class="ed-head-row">
@@ -89,7 +89,7 @@ function AdsTab({ c, set }) {
         <span class="ed-move"><button class="icon-btn" onClick=${() => set({ ...c, ads: move(c.ads, i, -1) })}>↑</button><button class="icon-btn" onClick=${() => set({ ...c, ads: move(c.ads, i, 1) })}>↓</button></span>
       </div>
       ${open === a.id && html`<${AdForm} a=${a} upd=${(patch) => upd(a.id, patch)} />
-        <button class="btn small danger" onClick=${() => set({ ...c, ads: c.ads.filter((x) => x.id !== a.id) })}>🗑 Anzeige löschen</button>`}
+        <button class="btn btn-sm btn-outline-danger" onClick=${() => set({ ...c, ads: c.ads.filter((x) => x.id !== a.id) })}><i class="bi bi-trash"></i> Anzeige löschen</button>`}
     </div>`)}
     <button class="btn" disabled=${c.ads.length >= 8} onClick=${() => { const id = uid('a'); set({ ...c, ads: [...c.ads, { id, label: 'Neu', brand: 'Marke', product: 'Produkt', slogan: 'Slogan', price: '9,99 €', cta: 'Mehr erfahren', art: ['🛍️', '✨'], bg: ['#4568dc', '#b06ab3'], cats: ['mode'] }] }); setOpen(id); }}>+ Anzeige hinzufügen</button>
   </div>`;
@@ -97,7 +97,7 @@ function AdsTab({ c, set }) {
 
 function PartyTab({ c, set }) {
   const updMsg = (cat, patch) => set({ ...c, partyMessages: { ...c.partyMessages, [cat]: { ...c.partyMessages[cat], ...patch } } });
-  return html`<div class="col">
+  return html`<div class="bb-col">
     <div class="ed-grid">
       <${Field} label="Parteiname" hint="fiktiv"><${Text} value=${c.party.name} max=${40} onInput=${(v) => set({ ...c, party: { ...c.party, name: v } })} /><//>
       <${Field} label="Kürzel"><${Text} value=${c.party.short} max=${8} onInput=${(v) => set({ ...c, party: { ...c.party, short: v } })} /><//>
@@ -114,10 +114,10 @@ function PartyTab({ c, set }) {
 
 function QuizTab({ c, set }) {
   const upd = (i, patch) => set({ ...c, quiz: c.quiz.map((q, k) => (k === i ? { ...q, ...patch } : q)) });
-  return html`<div class="col">
+  return html`<div class="bb-col">
     ${c.quiz.map((q, i) => html`<div class="ed-item open" key=${q.id}>
       <div class="ed-form">
-        <div class="row between"><b>Frage ${i + 1}</b><span class="ed-move"><button class="icon-btn" onClick=${() => set({ ...c, quiz: move(c.quiz, i, -1) })}>↑</button><button class="icon-btn" onClick=${() => set({ ...c, quiz: move(c.quiz, i, 1) })}>↓</button><button class="icon-btn" title="Löschen" onClick=${() => set({ ...c, quiz: c.quiz.filter((_, k) => k !== i) })}>🗑</button></span></div>
+        <div class="bb-row between"><b>Frage ${i + 1}</b><span class="ed-move"><button class="icon-btn" onClick=${() => set({ ...c, quiz: move(c.quiz, i, -1) })}>↑</button><button class="icon-btn" onClick=${() => set({ ...c, quiz: move(c.quiz, i, 1) })}>↓</button><button class="icon-btn" title="Löschen" onClick=${() => set({ ...c, quiz: c.quiz.filter((_, k) => k !== i) })}><i class="bi bi-trash"></i> </button></span></div>
         <${Text} value=${q.q} max=${160} onInput=${(v) => upd(i, { q: v })} />
         ${q.options.map((o, k) => html`<div class="opt-row"><input type="radio" name=${`c${q.id}`} checked=${q.correct === k} onChange=${() => upd(i, { correct: k })} title="richtige Antwort" /><${Text} value=${o} max=${90} onInput=${(v) => upd(i, { options: q.options.map((x, j) => (j === k ? v : x)) })} /></div>`)}
         <${Field} label="Erklärung (nach dem Auflösen)"><${Text} area value=${q.explain} max=${260} onInput=${(v) => upd(i, { explain: v })} /><//>
@@ -130,7 +130,7 @@ function QuizTab({ c, set }) {
 function FairnessTab({ c, set }) {
   const f = c.fairness;
   const upd = (patch) => set({ ...c, fairness: { ...f, ...patch } });
-  return html`<div class="col">
+  return html`<div class="bb-col">
     <p class="muted small">Ein Angebot, das eigentlich alle betrifft, wird nur nach einem Ersatzmerkmal (Proxy-Kategorie) ausgespielt.</p>
     <div class="ed-item open"><${AdForm} a=${f.ad} withCats=${false} upd=${(patch) => upd({ ad: { ...f.ad, ...patch } })} /></div>
     <${Field} label="Proxy-Kategorien" hint="danach wählt der Algorithmus aus (1–2)"><${CatPick} max=${2} value=${f.proxyCats} onInput=${(v) => upd({ proxyCats: v })} /><//>
@@ -141,9 +141,9 @@ function FairnessTab({ c, set }) {
 }
 
 function HistoryTab({ meta, onRestore }) {
-  return html`<div class="col">
+  return html`<div class="bb-col">
     ${meta.history.length ? meta.history.map((h) => html`<div class="hist-row"><span><b>${h.note}</b><small class="muted">${new Date(h.at).toLocaleString('de-DE')} · ${h.by}</small></span>
-      <button class="btn small" onClick=${() => confirm('Diesen Stand (vor der Änderung) wiederherstellen?') && onRestore(h.id)}>↺ Davor wiederherstellen</button></div>`) : html`<p class="muted">Noch keine Änderungen gespeichert.</p>`}
+      <button class="btn btn-sm" onClick=${() => confirm('Diesen Stand (vor der Änderung) wiederherstellen?') && onRestore(h.id)}><i class="bi bi-arrow-counterclockwise"></i> Davor wiederherstellen</button></div>`) : html`<p class="muted">Noch keine Änderungen gespeichert.</p>`}
   </div>`;
 }
 
@@ -197,45 +197,45 @@ function Assistant({ data, dirty, reload, onApplied, toast }) {
   const sec = running ? Math.round((now - job.startedAt) / 1000) : 0;
   const sets = data.suggestions || [];
   const scopes = [['posts', 'Beiträge'], ['ads', 'Anzeigen'], ['party', 'Wahlbotschaften'], ['quiz', 'Quiz']];
-  return html`<aside class="col assistant">
-    <div class="card pad col ai-card">
-      <div class="row between"><h3>🤖 KI-Assistent</h3>${data.ai.available ? html`<span class="status-pill ok">bereit</span>` : html`<span class="status-pill bad">nicht eingerichtet</span>`}</div>
+  return html`<aside class="bb-col assistant">
+    <div class="card pad bb-col ai-card">
+      <div class="bb-row between"><h3><i class="bi bi-robot"></i> KI-Assistent</h3>${data.ai.available ? html`<span class="status-pill ok">bereit</span>` : html`<span class="status-pill bad">nicht eingerichtet</span>`}</div>
       ${!data.ai.available ? html`<p class="muted small">Damit die KI Themen aktualisieren kann, muss auf dem Server die Umgebungsvariable <code>ANTHROPIC_API_KEY</code> gesetzt sein (CapRover → App Configs → Environmental Variables).</p>` : html`
         <p class="muted small">Die KI recherchiert aktuelle Themen im Web und schlägt Änderungen vor. Nichts wird ohne deine Zustimmung übernommen.</p>
-        <button class="btn primary block" disabled=${running} onClick=${() => start('refresh')}>🔄 Aktualitäts-Check starten</button>
+        <button class="btn btn-primary w-100" disabled=${running} onClick=${() => start('refresh')}><i class="bi bi-arrow-repeat"></i> Aktualitäts-Check starten</button>
         <div class="or">oder Thema vorgeben</div>
-        <textarea class="field" rows="2" maxlength="300" placeholder="z. B. Fußball-WM 2026 und Klimaschutz in Ostfriesland, Klasse 8" value=${topic} onInput=${(e) => setTopic(e.target.value)}></textarea>
-        <div class="row wrap gap">${scopes.map(([k, l]) => html`<label class="toggle small"><input type="checkbox" checked=${scope.includes(k)} onChange=${(e) => setScope(e.target.checked ? [...scope, k] : scope.filter((x) => x !== k))} /> ${l}</label>`)}</div>
-        <button class="btn block" disabled=${running || !topic.trim()} onClick=${() => start('topic')}>✨ Vorschläge zum Thema erzeugen</button>
+        <textarea class="form-control" rows="2" maxlength="300" placeholder="z. B. Fußball-WM 2026 und Klimaschutz in Ostfriesland, Klasse 8" value=${topic} onInput=${(e) => setTopic(e.target.value)}></textarea>
+        <div class="bb-row wrap gap">${scopes.map(([k, l]) => html`<label class="toggle small"><input type="checkbox" checked=${scope.includes(k)} onChange=${(e) => setScope(e.target.checked ? [...scope, k] : scope.filter((x) => x !== k))} /> ${l}</label>`)}</div>
+        <button class="btn w-100" disabled=${running || !topic.trim()} onClick=${() => start('topic')}><i class="bi bi-stars"></i> Vorschläge zum Thema erzeugen</button>
         ${running && html`<div class="ai-running"><span class="spinner"></span><span>Die KI recherchiert und schreibt … ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}<small class="muted">Das dauert meist 1–3 Minuten.</small></span></div>`}
       `}
     </div>
-    ${sets.map((s) => { const pending = s.items.filter((i) => i.status === 'pending'); return html`<div class="card pad col sug-set" key=${s.id}>
-      <div class="row between"><b>${s.source === 'auto' ? '⏰ Automatischer Check' : s.mode === 'topic' ? `✨ ${s.topic}` : '🔄 Aktualitäts-Check'}</b><small class="muted">${new Date(s.createdAt).toLocaleString('de-DE')}</small></div>
+    ${sets.map((s) => { const pending = s.items.filter((i) => i.status === 'pending'); return html`<div class="card pad bb-col sug-set" key=${s.id}>
+      <div class="bb-row between"><b>${s.source === 'auto' ? html`<i class="bi bi-alarm"></i> Automatischer Check` : s.mode === 'topic' ? `✨ ${s.topic}` : html`<i class="bi bi-arrow-repeat"></i> Aktualitäts-Check`}</b><small class="muted">${new Date(s.createdAt).toLocaleString('de-DE')}</small></div>
       ${s.summary && html`<p class="small">${s.summary}</p>`}
-      ${pending.length > 1 && html`<div class="row gap"><button class="btn small primary" onClick=${() => apply(s.id, pending.map((i) => i.id))}>Alle ${pending.length} übernehmen</button><button class="btn small ghost" onClick=${() => dismiss(s.id)}>Alle verwerfen</button></div>`}
+      ${pending.length > 1 && html`<div class="bb-row gap"><button class="btn btn-sm btn-primary" onClick=${() => apply(s.id, pending.map((i) => i.id))}>Alle ${pending.length} übernehmen</button><button class="btn btn-sm btn-ghost" onClick=${() => dismiss(s.id)}>Alle verwerfen</button></div>`}
       ${s.items.map((it) => html`<div class=${`sug ${it.status}`} key=${it.id}>
-        <div class="row gap wrap"><span>${KIND[it.kind][0]} ${KIND[it.kind][1]}</span><span class=${`status-pill ${ACTION[it.action][1]}`}>${ACTION[it.action][0]}</span>${it.status !== 'pending' && html`<span class="muted small">${it.status === 'applied' ? '✓ übernommen' : 'verworfen'}</span>`}</div>
+        <div class="bb-row gap wrap"><span>${KIND[it.kind][0]} ${KIND[it.kind][1]}</span><span class=${`status-pill ${ACTION[it.action][1]}`}>${ACTION[it.action][0]}</span>${it.status !== 'pending' && html`<span class="muted small">${it.status === 'applied' ? '✓ übernommen' : 'verworfen'}</span>`}</div>
         ${targetLabel(it, data.content) && html`<small class="muted">statt: „${targetLabel(it, data.content)}“</small>`}
         <${ItemPreview} it=${it} />
         <small class="reason">💡 ${it.reason}</small>
-        ${it.status === 'pending' && html`<div class="row gap"><button class="btn small ok" onClick=${() => apply(s.id, [it.id])}>✓ Übernehmen</button><button class="btn small ghost" onClick=${() => dismiss(s.id, [it.id])}>Verwerfen</button></div>`}
+        ${it.status === 'pending' && html`<div class="bb-row gap"><button class="btn btn-sm btn-success" onClick=${() => apply(s.id, [it.id])}>✓ Übernehmen</button><button class="btn btn-sm btn-ghost" onClick=${() => dismiss(s.id, [it.id])}>Verwerfen</button></div>`}
       </div>`)}
     </div>`; })}
-    <div class="card pad col">
-      <h3>⏰ Automatisierung</h3>
+    <div class="card pad bb-col">
+      <h3><i class="bi bi-alarm"></i> Automatisierung</h3>
       <p class="muted small">Die KI prüft die Inhalte regelmäßig auf Aktualität und legt Vorschläge ab.</p>
       <${Field} label="Automatischer Aktualitäts-Check"><${Select} value=${auto.schedule} onInput=${(v) => saveAuto({ schedule: v })} options=${[['off', 'aus'], ['weekly', 'wöchentlich'], ['monthly', 'monatlich']]} /><//>
-      <${Field} label="Dauerhafter Schwerpunkt" hint="optional"><input class="field" maxlength="300" value=${auto.focus} onChange=${(e) => saveAuto({ focus: e.target.value })} placeholder="z. B. regionaler Bezug Ostfriesland" /><//>
+      <${Field} label="Dauerhafter Schwerpunkt" hint="optional"><input class="form-control" maxlength="300" value=${auto.focus} onChange=${(e) => saveAuto({ focus: e.target.value })} placeholder="z. B. regionaler Bezug Ostfriesland" /><//>
       <label class="toggle"><input type="checkbox" checked=${auto.autoApply} onChange=${(e) => saveAuto({ autoApply: e.target.checked })} /> Vorschläge automatisch übernehmen</label>
-      ${auto.autoApply && html`<small class="muted">⚠️ Änderungen gehen dann ohne Prüfung live (laufende Räume behalten ihre Inhalte). Im Verlauf jederzeit rückgängig zu machen.</small>`}
+      ${auto.autoApply && html`<small class="muted"><i class="bi bi-exclamation-triangle"></i> Änderungen gehen dann ohne Prüfung live (laufende Räume behalten ihre Inhalte). Im Verlauf jederzeit rückgängig zu machen.</small>`}
       ${auto.lastRun ? html`<small class="muted">Letzter automatischer Check: ${new Date(auto.lastRun).toLocaleString('de-DE')}</small>` : ''}
     </div>
   </aside>`;
 }
 
 // ------------------------------------------------------------------ App
-const TABS = [['posts', '📰 Beiträge'], ['ads', '🎯 Werbung'], ['party', '🗳️ Wahlwerbung'], ['quiz', '🏆 Quiz'], ['fairness', '⚖️ Fairness'], ['history', '🕘 Verlauf']];
+const TABS = [['posts', html`<i class="bi bi-newspaper"></i> Beiträge`], ['ads', html`<i class="bi bi-bullseye"></i> Werbung`], ['party', html`<i class="bi bi-megaphone"></i> Wahlwerbung`], ['quiz', html`<i class="bi bi-trophy"></i> Quiz`], ['fairness', html`<i class="bi bi-shield-check"></i> Fairness`], ['history', html`<i class="bi bi-clock-history"></i> Verlauf`]];
 function App() {
   const [data, setData] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -264,19 +264,19 @@ function App() {
       <${Logo} size=${28} sub="Inhalts-Editor" />
       <span class="spacer"></span>
       ${dirty && html`<span class="status-pill warn">Ungespeicherte Änderungen</span>`}
-      <button class="btn small ghost" disabled=${!dirty} onClick=${() => setDraft(clone(data.content))}>Verwerfen</button>
-      <button class="btn small primary" disabled=${!dirty || busy} onClick=${save}>💾 Speichern</button>
-      <button class="btn small ghost" onClick=${() => confirm('Alle Inhalte auf den Standard (Originalmaterial) zurücksetzen? Der aktuelle Stand bleibt im Verlauf.') && post('/api/content/reset')}>↺ Standard</button>
-      <a class="btn small" href="/">← Start</a>
+      <button class="btn btn-sm btn-ghost" disabled=${!dirty} onClick=${() => setDraft(clone(data.content))}>Verwerfen</button>
+      <button class="btn btn-sm btn-primary" disabled=${!dirty || busy} onClick=${save}><i class="bi bi-floppy"></i> Speichern</button>
+      <button class="btn btn-sm btn-ghost" onClick=${() => confirm('Alle Inhalte auf den Standard (Originalmaterial) zurücksetzen? Der aktuelle Stand bleibt im Verlauf.') && post('/api/content/reset')}><i class="bi bi-arrow-counterclockwise"></i> Standard</button>
+      <a class="btn btn-sm" href="/"><i class="bi bi-arrow-left"></i> Start</a>
     </header>
     <main class="ed-main">
-      <section class="card pad col ed-panel">
+      <section class="card pad bb-col ed-panel">
         <nav class="ed-tabs">${TABS.map(([k, l]) => html`<button class=${`ed-tab ${tab === k ? 'on' : ''}`} onClick=${() => setTab(k)}>${l}</button>`)}</nav>
         <p class="muted small">Gespeicherte Inhalte gelten für alle <b>neu erstellten</b> Räume. Ein bestehender Raum übernimmt sie im Cockpit über „Neueste Inhalte übernehmen“ (nur in der Lobby).</p>
         ${tab === 'history' ? html`<${HistoryTab} meta=${data} onRestore=${(id) => post('/api/content/restore', { id })} />` : html`<${Tab} c=${draft} set=${setDraft} />`}
       </section>
       <${Assistant} data=${data} dirty=${dirty} reload=${() => load(false)} onApplied=${() => load(true)} toast=${toast} />
     </main>
-    ${msg && html`<div class="toast">${msg}</div>`}`;
+    ${msg && html`<div class="bb-toast">${msg}</div>`}`;
 }
 render(html`<${App} />`, document.getElementById('app'));

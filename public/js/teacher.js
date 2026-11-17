@@ -3,7 +3,7 @@ import {
   CATEGORIES, CAT, PHASE,
 } from './lib.js';
 
-import { PHASES } from '/shared/content.js';
+import { PHASES, ADS } from '/shared/content.js';
 const OPTIONAL = PHASES.filter((p) => p.optional).map((p) => p.id);
 const code = (qs.get('c') || '').toUpperCase();
 const key = location.hash.slice(1);
@@ -28,35 +28,35 @@ const HINTS = {
 function Settings({ v, act }) {
   const s = v.settings;
   const num = (k, min, max, label, hint) => html`<label class="set"><span>${label}<small class="muted">${hint}</small></span>
-    <input class="field" type="number" min=${min} max=${max} value=${s[k]} onChange=${(e) => act('settings', { [k]: Number(e.target.value) })} /></label>`;
-  return html`<div class="card pad col">
-    <h3>⚙️ Einstellungen</h3>
+    <input class="form-control" type="number" min=${min} max=${max} value=${s[k]} onChange=${(e) => act('settings', { [k]: Number(e.target.value) })} /></label>`;
+  return html`<div class="card pad bb-col">
+    <h3><i class="bi bi-gear"></i> Einstellungen</h3>
     ${num('maxLikes', 1, 22, 'Likes pro Person', 'Original: 10')}
     ${num('groupCount', 1, 7, 'Anzahl Gruppen', 'max. 7 (eine je Kategorie)')}
     ${num('budget', 0, 60, 'Werbebudget je Anzeige', `0 = automatisch (aktuell ${v.budget})`)}
     <div class="set"><span>Erweiterungen</span>
-      <div class="row gap wrap">${OPTIONAL.map((id) => html`<label class="toggle"><input type="checkbox" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} /> ${PHASE[id].icon} ${PHASE[id].title}</label>`)}</div>
+      <div class="bb-row gap wrap">${OPTIONAL.map((id) => html`<label class="toggle"><input type="checkbox" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} /> ${PHASE[id].icon} ${PHASE[id].title}</label>`)}</div>
     </div>
   </div>`;
 }
 
 function Tools({ v, act, sock }) {
   const ph = v.phase;
-  return html`<div class="card pad col tools">
-    <h3>🧰 Werkzeuge für „${PHASE[ph].title}“</h3>
+  return html`<div class="card pad bb-col tools">
+    <h3><i class="bi bi-tools"></i> Werkzeuge für „${PHASE[ph].title}“</h3>
     <p class="hint">${HINTS[ph]}</p>
-    <div class="row gap wrap">
-      ${['auswertung', 'werbung'].includes(ph) && html`<button class="btn small" onClick=${() => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup')}>🔀 Gruppen neu bilden</button>`}
-      ${ph === 'auswertung' && html`<button class="btn small" onClick=${() => confirm('Alle Tabellen mit den echten Like-Zahlen ausfüllen und abgeben?') && act('autoTally')}>⚡ Auswertung automatisch ausfüllen</button>`}
-      ${ph === 'werbung' && html`<button class="btn small" onClick=${() => confirm('Nicht geschaltete Anzeigen automatisch (nach Datenbank) schalten?') && act('autoAds')}>⚡ Restliche Anzeigen automatisch schalten</button>`}
-      ${ph === 'lobby' && html`<button class="btn small" onClick=${() => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error))}>📦 Neueste Inhalte aus dem Editor übernehmen</button><a class="btn small" href="/editor" target="bubbl-editor">✏️ Inhalts-Editor</a>`}
-      ${ph === 'werkbank' && html`<button class=${`btn ${v.werkbank?.test ? '' : 'primary'}`} onClick=${() => act('werkbankTest', { value: !v.werkbank?.test })}>${v.werkbank?.test ? '🙈 Testdaten verbergen' : '🧪 Testdaten aufdecken'}</button>`}
-      ${ph === 'fairness' && html`<button class=${`btn ${v.fairness?.rule ? '' : 'primary'}`} onClick=${() => act('fairRule', { value: !v.fairness?.rule })}>${v.fairness?.rule ? '⚖️ Fairness-Regel ausschalten' : '⚖️ Fairness-Regel einschalten'}</button>`}
+    <div class="bb-row gap wrap">
+      ${['auswertung', 'werbung'].includes(ph) && html`<button class="btn btn-sm" onClick=${() => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup')}><i class="bi bi-shuffle"></i> Gruppen neu bilden</button>`}
+      ${ph === 'auswertung' && html`<button class="btn btn-sm" onClick=${() => confirm('Alle Tabellen mit den echten Like-Zahlen ausfüllen und abgeben?') && act('autoTally')}>⚡ Auswertung automatisch ausfüllen</button>`}
+      ${ph === 'werbung' && html`<button class="btn btn-sm" onClick=${() => confirm('Nicht geschaltete Anzeigen automatisch (nach Datenbank) schalten?') && act('autoAds')}>⚡ Restliche Anzeigen automatisch schalten</button>`}
+      ${ph === 'lobby' && html`<button class="btn btn-sm" onClick=${() => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error))}><i class="bi bi-box-arrow-in-down"></i> Neueste Inhalte aus dem Editor übernehmen</button><a class="btn btn-sm" href="/editor" target="bubbl-editor"><i class="bi bi-pencil-square"></i> Inhalts-Editor</a>`}
+      ${ph === 'werkbank' && html`<button class=${`btn ${v.werkbank?.test ? '' : 'btn-primary'}`} onClick=${() => act('werkbankTest', { value: !v.werkbank?.test })}>${v.werkbank?.test ? html`<i class="bi bi-eye-slash"></i> Testdaten verbergen` : html`<i class="bi bi-clipboard-data"></i> Testdaten aufdecken`}</button>`}
+      ${ph === 'fairness' && html`<button class=${`btn ${v.fairness?.rule ? '' : 'btn-primary'}`} onClick=${() => act('fairRule', { value: !v.fairness?.rule })}>${v.fairness?.rule ? html`<i class="bi bi-shield-check"></i> Fairness-Regel ausschalten` : html`<i class="bi bi-shield-check"></i> Fairness-Regel einschalten`}</button>`}
       ${ph === 'quiz' && v.quiz && html`
-        ${v.quiz.idx < v.quiz.total && html`<button class="btn primary" disabled=${v.quiz.open} onClick=${() => act('quizNext')}>${v.quiz.idx < 0 ? '▶ Quiz starten' : v.quiz.idx === v.quiz.total - 1 ? '🏁 Siegerehrung' : '▶ Nächste Frage'}</button>`}
-        ${v.quiz.idx >= 0 && v.quiz.idx < v.quiz.total && html`<button class="btn" disabled=${!v.quiz.open} onClick=${() => act('quizReveal')}>🔍 Auflösen (${v.quiz.answered}/${v.players.length})</button>`}
-        <button class="btn small ghost" onClick=${() => confirm('Quiz zurücksetzen? Alle Antworten gehen verloren.') && act('quizReset')}>↺ Zurücksetzen</button>`}
-      ${ph === 'wahl' && html`<button class=${`btn ${v.voteRevealed ? '' : 'primary'}`} onClick=${() => act('revealVote', { value: !v.voteRevealed })}>${v.voteRevealed ? '🙈 Wieder verdecken' : '🔍 Botschaften aufdecken'}</button>`}
+        ${v.quiz.idx < v.quiz.total && html`<button class="btn btn-primary" disabled=${v.quiz.open} onClick=${() => act('quizNext')}>${v.quiz.idx < 0 ? html`<i class="bi bi-play-fill"></i> Quiz starten` : v.quiz.idx === v.quiz.total - 1 ? html`<i class="bi bi-flag-fill"></i> Siegerehrung` : html`<i class="bi bi-play-fill"></i> Nächste Frage`}</button>`}
+        ${v.quiz.idx >= 0 && v.quiz.idx < v.quiz.total && html`<button class="btn" disabled=${!v.quiz.open} onClick=${() => act('quizReveal')}><i class="bi bi-search"></i> Auflösen (${v.quiz.answered}/${v.players.length})</button>`}
+        <button class="btn btn-sm btn-ghost" onClick=${() => confirm('Quiz zurücksetzen? Alle Antworten gehen verloren.') && act('quizReset')}><i class="bi bi-arrow-counterclockwise"></i> Zurücksetzen</button>`}
+      ${ph === 'wahl' && html`<button class=${`btn ${v.voteRevealed ? '' : 'btn-primary'}`} onClick=${() => act('revealVote', { value: !v.voteRevealed })}>${v.voteRevealed ? html`<i class="bi bi-eye-slash"></i> Wieder verdecken` : html`<i class="bi bi-search"></i> Botschaften aufdecken`}</button>`}
     </div>
     ${ph === 'reflexion' && v.reflexion && html`<div class="notes-mod">${v.reflexion.notes.length ? v.reflexion.notes.map((n) => html`<label class=${`note-mod ${n.hidden ? 'hidden' : ''}`}>
       <input type="checkbox" checked=${!n.hidden} onChange=${(e) => act('hideNote', { key: n.key, value: !e.target.checked })} />
@@ -69,7 +69,7 @@ function Players({ v, act }) {
   const stat = (p) => {
     switch (v.phase) {
       case 'feed': return `${p.likes}/${v.settings.maxLikes} ${p.feedDone ? '✓' : ''}`;
-      case 'empfang': return `${p.rated}/7 bewertet`;
+      case 'empfang': return `${p.rated}/${ADS.length} bewertet`;
       case 'profil': return `${p.inferDone} Rückm.`;
       case 'blase': return `${p.bubbleLikes} Likes · ${Math.round((p.bubbleIndex ?? 1) * 100)} % Vielfalt`;
       case 'wahl': return p.voted ? '✓ abgestimmt' : '–';
@@ -77,13 +77,13 @@ function Players({ v, act }) {
       default: return `${p.likes} Likes`;
     }
   };
-  return html`<div class="card pad col">
-    <div class="row between"><h3>👥 Teilnehmende (${v.players.length})</h3><span class="muted small">${v.players.filter((p) => p.online).length} online</span></div>
+  return html`<div class="card pad bb-col">
+    <div class="bb-row between"><h3><i class="bi bi-people"></i> Teilnehmende (${v.players.length})</h3><span class="muted small">${v.players.filter((p) => p.online).length} online</span></div>
     <div class="ptable">
       <div class="prow head"><span>ID</span><span>Gruppe</span><span>Status</span><span title="Hauptinteresse laut Likes → laut Tracking">Interesse (Likes → Tracking)</span><span title="gesammelte Datenpunkte">Daten</span><span></span></div>
       ${v.players.map((p) => html`<div class="prow">
-        <span class="row gap"><${Avatar} id=${p.id} avatar=${p.avatar} size=${34} online=${p.online} /></span>
-        <span>${groups.length ? html`<select class="field mini" value=${p.group || ''} onChange=${(e) => act('setGroup', { id: p.id, group: e.target.value })}>${groups.map((g) => html`<option value=${g.id}>${g.id}</option>`)}</select>` : html`<span class="muted">–</span>`}</span>
+        <span class="bb-row gap"><${Avatar} id=${p.id} avatar=${p.avatar} size=${34} online=${p.online} /></span>
+        <span>${groups.length ? html`<select class="form-select form-select-sm" value=${p.group || ''} onChange=${(e) => act('setGroup', { id: p.id, group: e.target.value })}>${groups.map((g) => html`<option value=${g.id}>${g.id}</option>`)}</select>` : html`<span class="muted">–</span>`}</span>
         <span class="small">${stat(p)}</span>
         <span class="small">${p.topLikes ? CAT[p.topLikes].icon : '·'} → ${p.topFull ? CAT[p.topFull].icon : '·'} ${p.topHidden && p.topHidden !== p.topLikes ? html`<span class="status-pill warn" title="Tracking zeigt anderes Interesse">🕵️ ${CAT[p.topHidden].icon}</span>` : ''}</span>
         <span class="small num">${p.dataPoints ?? '–'}</span>
@@ -102,7 +102,7 @@ function Preview() {
     ro.observe(el); return () => ro.disconnect();
   }, []);
   return html`<div class="card preview">
-    <div class="row between pad-s"><b>📺 Beamer-Vorschau</b><a class="btn small" href=${beamerUrl} target="bubbl-beamer">Im eigenen Fenster öffnen ↗</a></div>
+    <div class="bb-row between pad-s"><b><i class="bi bi-display"></i> Beamer-Vorschau</b><a class="btn btn-sm" href=${beamerUrl} target="bubbl-beamer">Im eigenen Fenster öffnen ↗</a></div>
     <div class="preview-frame" ref=${ref}><iframe src=${beamerUrl} title="Beamer-Vorschau" tabindex="-1"></iframe></div>
   </div>`;
 }
@@ -132,37 +132,37 @@ function App() {
       <${Logo} size=${28} sub="Lehrkraft" />
       <div class="t-code"><small>Raumcode</small><b>${v.code}</b></div>
       <span class="spacer"></span>
-      <button class="btn small" onClick=${copy}>${copied ? '✓ Kopiert' : '🔗 SuS-Link kopieren'}</button>
-      <a class="btn small primary" href=${beamerUrl} target="bubbl-beamer">📺 Beamer öffnen</a>
-      <a class="btn small" href=${`/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}`}>⬇︎ CSV</a>
-      <a class="btn small" href="/editor" target="bubbl-editor">✏️ Inhalte</a>
-      <button class="btn small ghost" title="Abmelden" onClick=${async () => { await teacherLogout(); location.replace('/'); }}>⎋ Abmelden</button>
+      <button class="btn btn-sm" onClick=${copy}>${copied ? '✓ Kopiert' : html`<i class="bi bi-link-45deg"></i> SuS-Link kopieren`}</button>
+      <a class="btn btn-sm btn-primary" href=${beamerUrl} target="bubbl-beamer"><i class="bi bi-display"></i> Beamer öffnen</a>
+      <a class="btn btn-sm" href=${`/api/rooms/${code}/export.csv?key=${encodeURIComponent(key)}`}><i class="bi bi-download"></i> CSV</a>
+      <a class="btn btn-sm" href="/editor" target="bubbl-editor"><i class="bi bi-pencil-square"></i> Inhalte</a>
+      <button class="btn btn-sm btn-ghost" title="Abmelden" onClick=${async () => { await teacherLogout(); location.replace('/'); }}><i class="bi bi-box-arrow-right"></i> Abmelden</button>
     </header>
     <main class="t-main">
-      <section class="card pad col phase-ctl">
-        <div class="row between wrap gap">
+      <section class="card pad bb-col phase-ctl">
+        <div class="bb-row between wrap gap">
           <div><small class="muted">Aktueller Schritt ${idx + 1} von ${v.phases.length}</small><h2>${PHASE[v.phase].icon} ${PHASE[v.phase].title}</h2></div>
-          <div class="row gap">
-            <button class="btn" disabled=${idx <= 0} onClick=${() => go(-1)}>◀ Zurück</button>
-            <button class="btn primary big-next" disabled=${idx >= v.phases.length - 1} onClick=${() => go(1)}>${v.phases[idx + 1] ? `Weiter: ${PHASE[v.phases[idx + 1]].title} ▶` : '🏁 Letzter Schritt'}</button>
+          <div class="bb-row gap">
+            <button class="btn" disabled=${idx <= 0} onClick=${() => go(-1)}><i class="bi bi-chevron-left"></i> Zurück</button>
+            <button class="btn btn-primary big-next" disabled=${idx >= v.phases.length - 1} onClick=${() => go(1)}>${v.phases[idx + 1] ? `Weiter: ${PHASE[v.phases[idx + 1]].title} ▶` : html`<i class="bi bi-flag-fill"></i> Letzter Schritt`}</button>
           </div>
         </div>
         <${Stepper} phases=${v.phases} phase=${v.phase} progress=${v.progress} onPick=${(p) => act('setPhase', { phase: p })} />
         <${Progress} big done=${v.progress.done} total=${v.progress.total} label=${v.progress.label} />
       </section>
       <div class="t-grid">
-        <div class="col">
+        <div class="bb-col">
           <${Tools} v=${v} act=${act} sock=${sock} />
           <${Players} v=${v} act=${act} />
         </div>
-        <div class="col">
+        <div class="bb-col">
           <${Preview} />
           <${Settings} v=${v} act=${act} />
-          <div class="card pad col danger-zone">
-            <h3>⚠️ Raum verwalten</h3>
-            <div class="row gap wrap">
-              <button class="btn small" onClick=${() => confirm('Alle Spieldaten (Likes, Gruppen, Bewertungen …) löschen und zur Lobby zurückkehren? Die Teilnehmenden bleiben im Raum.') && act('resetPlayerData')}>↺ Neue Runde (Daten zurücksetzen)</button>
-              <button class="btn small danger" onClick=${() => { if (confirm('Raum endgültig löschen? Alle Daten gehen verloren.')) { sock.current?.emit('deleteRoom', { key }); store.set('bubbl:rooms', store.get('bubbl:rooms', []).filter((r) => r.code !== code)); setTimeout(() => location.replace('/'), 300); } }}>🗑 Raum löschen</button>
+          <div class="card pad bb-col danger-zone">
+            <h3><i class="bi bi-exclamation-triangle"></i> Raum verwalten</h3>
+            <div class="bb-row gap wrap">
+              <button class="btn btn-sm" onClick=${() => confirm('Alle Spieldaten (Likes, Gruppen, Bewertungen …) löschen und zur Lobby zurückkehren? Die Teilnehmenden bleiben im Raum.') && act('resetPlayerData')}><i class="bi bi-arrow-counterclockwise"></i> Neue Runde (Daten zurücksetzen)</button>
+              <button class="btn btn-sm btn-outline-danger" onClick=${() => { if (confirm('Raum endgültig löschen? Alle Daten gehen verloren.')) { sock.current?.emit('deleteRoom', { key }); store.set('bubbl:rooms', store.get('bubbl:rooms', []).filter((r) => r.code !== code)); setTimeout(() => location.replace('/'), 300); } }}><i class="bi bi-trash"></i> Raum löschen</button>
             </div>
             <small class="muted">Räume werden 30 Tage nach der letzten Änderung automatisch gelöscht. Es werden keine Namen gespeichert.</small>
           </div>

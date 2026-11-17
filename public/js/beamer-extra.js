@@ -18,7 +18,7 @@ export function WerkbankStage({ v }) {
   return html`<div class="split wide-left">
     <div class="glass stage-card">
       <div class="card-head"><h3>🛠️ Bestenliste der Algorithmen</h3><span class="muted">Gesamtwert F1 · Trainingsdaten: ${wb.split.train.map((id) => AD[id]?.label).join(', ')}</span></div>
-      ${wb.test && html`<div class="legend"><span class="lg solid" style="--lc:#ec4899">Trainingsdaten</span><span class="lg solid" style="--lc:#0ea5e9">Testdaten (${wb.split.test.map((id) => AD[id]?.label).join(', ')})</span></div>`}
+      ${wb.test && html`<div class="legend"><span class="lg solid" style="--lc:#0C5D6A">Trainingsdaten</span><span class="lg solid" style="--lc:#0ea5e9">Testdaten (${wb.split.test.map((id) => AD[id]?.label).join(', ')})</span></div>`}
       <div class="wb-rows">
         ${rows.map((g, i) => html`<div class="wb-row" key=${g.id}>
           <span class="wb-rank">${i + 1}</span><${GroupBadge} gid=${g.id} />

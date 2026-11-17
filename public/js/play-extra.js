@@ -44,7 +44,7 @@ export function Auskunft({ code }) {
   return html`<div class="glass pad">
     <h3>📄 Datenauskunft nach Art. 15 DSGVO</h3>
     <p class="muted small">Du hast das Recht zu erfahren, welche Daten ein Unternehmen über dich speichert. Fordere deine Auskunft an!</p>
-    <button class="btn primary" disabled=${busy} onClick=${load}>${busy ? 'Wird erstellt …' : d ? 'Aktualisieren' : 'Meine Daten anfordern'}</button>
+    <button class="btn btn-primary" disabled=${busy} onClick=${load}>${busy ? 'Wird erstellt …' : d ? 'Aktualisieren' : 'Meine Daten anfordern'}</button>
     ${err && html`<p class="error">${err}</p>`}
     ${d && html`<div class="auskunft">
       <div class="letter">
@@ -90,24 +90,25 @@ function Metric({ label, value, hint, big }) {
 export function Werkbank({ v, act }) {
   const wb = v.werkbank;
   const g = v.group;
-  const [w, setW] = useState(wb?.weights);
+  const [wLocal, setW] = useState(wb?.weights);
   const timer = useRef(null);
   const editing = useRef(0);
   useEffect(() => { if (Date.now() - editing.current > 1200) setW(wb?.weights); }, [JSON.stringify(wb?.weights)]);
   if (!wb || !g) return html`<div class="glass pad">Du bist noch keiner Gruppe zugeordnet.</div>`;
+  const w = wLocal || wb.weights; // falls die Gruppe erst nachträglich zugeordnet wurde
   const change = (k, val) => {
     const next = { ...w, [k]: val }; setW(next); editing.current = Date.now();
     clearTimeout(timer.current); timer.current = setTimeout(() => act('weights', { weights: next }), 180);
   };
   const r = wb.result.train;
   const terms = SIGNALS.filter(([k]) => w[k] > 0).map(([k, l]) => `${fmtW(w[k])} × ${l.split(' ').slice(1).join(' ').toLowerCase()}`);
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <div class="glass pad group-head">
-      <div class="row wrap gap"><${GroupBadge} gid=${g.id} big /><span class="status-pill ok">Platz ${wb.rank} von ${wb.groups}</span></div>
+      <div class="bb-row wrap gap"><${GroupBadge} gid=${g.id} big /><span class="status-pill ok">Platz ${wb.rank} von ${wb.groups}</span></div>
       <div class="members">${g.members.map((m) => html`<${Avatar} id=${m.id} avatar=${m.avatar} size=${34} online=${m.online} />`)}</div>
       <p class="muted small">Alle in eurer Gruppe sehen und verändern dieselben Regler.</p>
     </div>
-    <div class="glass pad col">
+    <div class="glass pad bb-col">
       <h3>🛠️ Euer Targeting-Algorithmus</h3>
       ${SIGNALS.map(([k, label, hint]) => html`<label class="slider">
         <span class="slider-head"><b>${label}</b><em>${fmtW(w[k])}</em></span>
@@ -126,7 +127,7 @@ export function Werkbank({ v, act }) {
   zeige die Anzeige den ${wb.budget} Personen
   mit den meisten Punkten, falls punkte > ${fmtW(w.threshold)}`}</pre>
     </div>
-    <div class="glass pad col">
+    <div class="glass pad bb-col">
       <h3>📈 Ergebnis mit Trainingsdaten</h3>
       <p class="muted small">Geprüft an euren echten Bewertungen der Anzeigen ${wb.split.train.map((id) => AD[id]?.label).join(', ')}.</p>
       <div class="metrics"><${Metric} big label="Gesamtwert (F1)" value=${r.f1} hint="verbindet beide Werte" /><${Metric} label="Trefferquote" value=${r.precision} hint="gezeigt & passend" /><${Metric} label="Reichweite" value=${r.recall} hint="Interessierte erreicht" /></div>
@@ -136,7 +137,7 @@ export function Werkbank({ v, act }) {
         <span>🤖 bubbl: <b>${pct(wb.baselines.algo.train.f1)}</b></span>
       </div>
     </div>
-    ${wb.test ? html`<div class="glass pad col test-card">
+    ${wb.test ? html`<div class="glass pad bb-col test-card">
       <span class="kicker">Aufgedeckt</span>
       <h3>🧪 Und mit neuen Testdaten?</h3>
       <p class="muted small">Anzeigen, die euer Algorithmus noch nie „gesehen“ hat: ${wb.split.test.map((id) => AD[id]?.label).join(', ')}.</p>
@@ -150,9 +151,9 @@ export function Werkbank({ v, act }) {
 export function Fairness({ v, act }) {
   const f = v.fairness; const ad = FAIRNESS.ad;
   const a = f.answers || {};
-  const yesNo = (key, val, label) => html`<button class=${`btn ${a[key] === val ? (val ? 'ok' : 'bad-on') : ''}`} onClick=${() => act('fairAnswer', { key, value: a[key] === val ? null : val })}>${label}</button>`;
+  const yesNo = (key, val, label) => html`<button class=${`btn ${a[key] === val ? (val ? 'btn-success' : 'btn-danger') : ''}`} onClick=${() => act('fairAnswer', { key, value: a[key] === val ? null : val })}>${label}</button>`;
   const done = a.interest != null && a.fair != null;
-  return html`<section class="col stagger">
+  return html`<section class="bb-col stagger">
     ${f.saw ? html`<article class="post card">
       <div class="post-head"><span class="page-av">${ad.art[0]}</span><div class="page-meta"><b>${ad.brand}</b><span class="sponsored"><b>Gesponsert</b></span></div></div>
       <${AdVisual} ad=${ad} />
@@ -162,14 +163,14 @@ export function Fairness({ v, act }) {
       <div class="greyed"><${AdVisual} ad=${ad} /></div>
       <div class="post-body"><h3>${ad.product}</h3><p>${ad.slogan}</p></div>
     </article>`}
-    <div class="glass pad col">
+    <div class="glass pad bb-col">
       <h3>${FAIRNESS.question}</h3>
       <div class="rate">${yesNo('interest', true, '👍 Ja, interessant')}${yesNo('interest', false, '👎 Eher nicht')}</div>
       <h3>${FAIRNESS.fairQuestion}</h3>
       <div class="rate">${yesNo('fair', true, '⚖️ Ja, fair')}${yesNo('fair', false, '🚩 Nein, unfair')}</div>
     </div>
     ${done && html`<div class="glass pad"><span class="kicker">Hintergrund</span><p>${FAIRNESS.explain}</p>
-      <div class="row wrap gap">${(FAIRNESS.proxyCats || []).map((c) => html`<${CatChip} cat=${c} small />`)}<small class="muted">= Ersatzmerkmal (Proxy), nach dem ausgewählt wurde</small></div></div>`}
+      <div class="bb-row wrap gap">${(FAIRNESS.proxyCats || []).map((c) => html`<${CatChip} cat=${c} small />`)}<small class="muted">= Ersatzmerkmal (Proxy), nach dem ausgewählt wurde</small></div></div>`}
   </section>`;
 }
 
@@ -191,9 +192,9 @@ export function Quiz({ v, act }) {
   if (q.idx < 0) return html`<div class="glass pad center quiz-wait"><span class="big-emoji">🏆</span><h2>Gleich geht's los!</h2><p class="muted">Schau auf den Beamer.</p></div>`;
   if (q.idx >= q.total) return html`<div class="glass pad center quiz-wait"><span class="big-emoji">🎉</span><h2>Quiz beendet</h2><p>Platz <b>${q.rank}</b> von ${q.players} · <b>${q.score.toLocaleString('de-DE')}</b> Punkte</p></div>`;
   const item = q.item;
-  return html`<section class="col">
+  return html`<section class="bb-col">
     <div class="glass pad">
-      <div class="row between"><small class="muted">Frage ${q.idx + 1} von ${q.total}</small>${q.open && html`<span class=${`status-pill ${left <= 5 ? 'bad' : 'warn'}`}>⏱ ${left} s</span>`}</div>
+      <div class="bb-row between"><small class="muted">Frage ${q.idx + 1} von ${q.total}</small>${q.open && html`<span class=${`status-pill ${left <= 5 ? 'bad' : 'warn'}`}>⏱ ${left} s</span>`}</div>
       <h2 class="quiz-q">${item.q}</h2>
       ${q.open && html`<div class="quiz-timer"><i style=${`width:${(left / q.seconds) * 100}%`}></i></div>`}
     </div>

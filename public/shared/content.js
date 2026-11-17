@@ -13,7 +13,8 @@ export const CATEGORIES = [
   { id: 'natur', name: 'Natur', icon: '🌲', color: '#0ca30c', light: '#008300' },
   { id: 'ernaehrung', name: 'Ernährung', icon: '🥗', color: '#9085e9', light: '#6250d6' },
 ];
-export const CAT = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
+const dict = (entries) => Object.assign(Object.create(null), Object.fromEntries(entries));
+export const CAT = dict(CATEGORIES.map((c) => [c.id, c]));
 
 export const PAGES = {
   styleup: { name: 'StyleUp Magazin', handle: 'styleup', avatar: '💄', cat: 'mode' },
@@ -278,12 +279,12 @@ export const DEFAULT_CONTENT = Object.freeze({
   contradictions: DEFAULT_CONTRADICTIONS, quiz: DEFAULT_QUIZ, fairness: DEFAULT_FAIRNESS,
 });
 export const POSTS = [];
-export const POST = {};
+export const POST = Object.create(null); // ohne Prototyp: POST['constructor'] ist kein gültiger Beitrag
 export const ROUND1 = [];
 export const ADS = [];
-export const AD = {};
+export const AD = Object.create(null);
 export const PARTY = {};
-export const PARTY_MESSAGES = {};
+export const PARTY_MESSAGES = Object.create(null);
 export const CONTRADICTIONS = [];
 export const QUIZ = [];
 export const FAIRNESS = {};
@@ -292,12 +293,18 @@ const reset = (obj, data) => { for (const k of Object.keys(obj)) delete obj[k]; 
 let applied = null;
 export function applyContent(c = DEFAULT_CONTENT) {
   if (c === applied) return;
-  applied = c;
-  refill(POSTS, c.posts); reset(POST, Object.fromEntries(c.posts.map((p) => [p.id, p])));
-  refill(ROUND1, c.posts.filter((p) => p.round === 1));
-  refill(ADS, c.ads); reset(AD, Object.fromEntries(c.ads.map((a) => [a.id, a])));
-  reset(PARTY, c.party); reset(PARTY_MESSAGES, c.partyMessages); refill(CONTRADICTIONS, c.contradictions);
-  refill(QUIZ, c.quiz); reset(FAIRNESS, c.fairness);
+  applied = null;
+  try {
+    refill(POSTS, c.posts); reset(POST, Object.fromEntries(c.posts.map((p) => [p.id, p])));
+    refill(ROUND1, c.posts.filter((p) => p.round === 1));
+    refill(ADS, c.ads); reset(AD, Object.fromEntries(c.ads.map((a) => [a.id, a])));
+    reset(PARTY, c.party); reset(PARTY_MESSAGES, c.partyMessages); refill(CONTRADICTIONS, c.contradictions || []);
+    refill(QUIZ, c.quiz); reset(FAIRNESS, c.fairness);
+    applied = c; // erst merken, wenn alles vollständig eingesetzt ist
+  } catch (e) {
+    if (c !== DEFAULT_CONTENT) { applyContent(DEFAULT_CONTENT); return; } // unvollständiges Paket → Standard
+    throw e;
+  }
 }
 applyContent(DEFAULT_CONTENT);
 

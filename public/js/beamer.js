@@ -94,8 +94,8 @@ function Auswertung({ v }) {
       <${Heatmap} v=${v} showTruthDiff />
     </div>
     <div class="group-strip">${v.groups.map((g) => html`<div class=${`group-card glass ${g.tallyDone ? 'done' : ''}`} style=${`--g:${groupColor(g.id)}`}>
-      <div class="row"><${GroupBadge} gid=${g.id} />${g.tallyDone ? html`<span class="status-pill ok">✓ ${pct(g.accuracy)} korrekt</span>` : html`<span class="status-pill warn">${g.filled} Einträge</span>`}</div>
-      <div class="row gap">${g.cats.map((c) => html`<span title=${CAT[c].name} class="cat-ico">${CAT[c].icon}</span>`)}<span class="members-mini">${g.members.map((id) => html`<i>${v.players.find((p) => p.id === id)?.avatar}</i>`)}</span></div>
+      <div class="bb-row"><${GroupBadge} gid=${g.id} />${g.tallyDone ? html`<span class="status-pill ok">✓ ${pct(g.accuracy)} korrekt</span>` : html`<span class="status-pill warn">${g.filled} Einträge</span>`}</div>
+      <div class="bb-row gap">${g.cats.map((c) => html`<span title=${CAT[c].name} class="cat-ico">${CAT[c].icon}</span>`)}<span class="members-mini">${g.members.map((id) => html`<i>${v.players.find((p) => p.id === id)?.avatar}</i>`)}</span></div>
     </div>`)}</div>
   </div>`;
 }
@@ -138,7 +138,7 @@ function Werbung({ v }) {
       <div class="card-head"><h3>Gewählte Zielgruppen</h3></div>
       <div class="ad-status">${ADS.map((a) => { const w = v.adWork?.[a.id] || { cats: [], targets: [] }; return html`<div class=${`ad-st ${w.done ? 'done' : ''}`}>
         <span class="ad-st-emoji" style=${`--c:${a.bg[0]}`}>${a.art[0]}</span>
-        <div><b>${a.label}</b><div class="row wrap gap">${w.cats.length ? w.cats.map((c) => html`<${CatChip} cat=${c} small />`) : html`<small class="muted">noch keine Kategorie</small>`}</div></div>
+        <div><b>${a.label}</b><div class="bb-row wrap gap">${w.cats.length ? w.cats.map((c) => html`<${CatChip} cat=${c} small />`) : html`<small class="muted">noch keine Kategorie</small>`}</div></div>
         <span class="ad-st-n">${w.done ? '✓' : `${w.targets.length}`}</span>
       </div>`; })}</div>
     </div>
@@ -235,7 +235,7 @@ function Blase({ v }) {
   const deep = v.players.filter((p) => p.bubbleLen && p.bubbleIndex < 0.4).length;
   return html`<div class="split wide-left">
     <div class="glass stage-card"><div class="card-head"><h3>🫧 Wer steckt in welcher Blase?</h3><span class="muted">Je näher an einem Thema, desto einseitiger der Feed</span></div><${BubbleMap} v=${v} /></div>
-    <div class="col">
+    <div class="bb-col">
       <div class="glass stage-card center">
         <small class="muted">Durchschnittliche Feed-Vielfalt</small>
         <div class="gauge" style=${`--k:${avg}`}><b>${Math.round(avg * 100)} %</b></div>
@@ -269,7 +269,8 @@ function Wahl({ v }) {
   return html`<div class="stack">
     <div class="contra-grid">
       ${CONTRADICTIONS.map(([a, b, t]) => html`<div class="contra-row">${card(a)}<span class="bolt" title=${t}>⚡<small>${t}</small></span>${card(b)}</div>`)}
-      <div class="contra-row single">${card('mode')}<p class="insight">Eine Partei – <b>sieben verschiedene Versprechen</b>. Weil jede Person nur ihre eigene Botschaft sieht, fällt der Widerspruch niemandem auf. So funktioniert politisches Microtargeting (vgl. Cambridge Analytica, 2016).</p></div>
+      ${(() => { const paired = new Set(CONTRADICTIONS.flatMap(([a, b]) => [a, b])); const singles = CATEGORIES.map((c) => c.id).filter((id) => !paired.has(id)); return singles.map((id) => html`<div class="contra-row single">${card(id)}</div>`); })()}
+      <div class="contra-row single"><p class="insight">Eine Partei – <b>${CATEGORIES.length} verschiedene Versprechen</b>. Weil jede Person nur ihre eigene Botschaft sieht, fällt der Widerspruch niemandem auf. So funktioniert politisches Microtargeting (vgl. Cambridge Analytica, 2016).</p></div>
     </div>
   </div>`;
 }
