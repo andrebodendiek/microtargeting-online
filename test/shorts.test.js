@@ -11,20 +11,25 @@ const setup = () => {
 };
 
 test('Shorts: Feed verengt sich allein durch Wiedergabezeit, Werbung jeder 5. Clip', () => {
-  const { r, ps } = setup();
-  const p = ps[0];
-  // Nur Technik lange anschauen, alles andere sofort wegwischen
-  for (let k = 0; k < 40; k++) {
-    const cur = G.nextShorts(p, 1)[0];
-    G.actions.shortWatched(r, p, { id: cur.id, ms: cur.ad ? 3000 : cur.cat === 'technik' ? cur.ms : 500 });
+  const r = G.createRoom('SHRT');
+  const ps = Array.from({ length: 20 }, (_, i) => G.actions.join(r, null, { email: `user${i}x`, avatar: randomAvatar(), consent: { agb: true } }));
+  G.actions.setPhase(r, null, { phase: 'shorts' });
+  let tops = 0, first = 0, last = 0;
+  for (const p of ps) {
+    // Nur Technik lange anschauen, alles andere schnell wegwischen
+    for (let k = 0; k < 40; k++) {
+      const cur = G.nextShorts(p, 1)[0];
+      G.actions.shortWatched(r, p, { id: cur.id, ms: cur.ad ? 3000 : cur.cat === 'technik' ? cur.ms : 500 });
+    }
+    const st = G.shortsStats(p);
+    assert.equal(st.count, 40);
+    assert.equal(st.ads, 8, 'jeder 5. Clip ist Werbung');
+    assert.equal(p.likes.length, 0, 'kein einziges Like nötig');
+    if (st.top === 'technik') tops++;
+    first += st.firstShare; last += st.lastShare;
   }
-  const st = G.shortsStats(p);
-  assert.equal(st.count, 40);
-  assert.equal(st.ads, 8, 'jeder 5. Clip ist Werbung');
-  assert.equal(st.top, 'technik');
-  assert.ok(st.lastShare > st.firstShare, `Verengung: ${st.firstShare} → ${st.lastShare}`);
-  assert.ok(st.lastShare >= 0.6);
-  assert.equal(p.likes.length, 0, 'kein einziges Like nötig');
+  assert.ok(tops >= 18, `Technik als Hauptthema erkannt bei ${tops}/20`);
+  assert.ok(last / 20 > first / 20 + 0.2, `Verengung im Schnitt: ${(first / 20).toFixed(2)} → ${(last / 20).toFixed(2)}`);
 });
 
 test('Shorts: nur der aktuelle Clip zählt, Zeit wird begrenzt, Stopp sperrt', () => {

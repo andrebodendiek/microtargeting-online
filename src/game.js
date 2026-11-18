@@ -96,8 +96,21 @@ export function checkRegistration(room, reg = {}) {
   };
 }
 
+// Nutzer-IDs wirken zufällig (z. B. #47, #83) statt fortlaufend – bleiben aber kurz und gut merkbar.
+// Zweistellig, solange genug frei sind; bei großen Räumen dreistellig. Auch entfernte IDs werden nicht neu vergeben.
+function newPlayerId(room) {
+  const taken = new Set(Object.keys(room.players).map(Number));
+  for (const [lo, hi] of [[10, 99], [100, 999], [1000, 9999]]) {
+    const free = [];
+    for (let i = lo; i <= hi; i++) if (!taken.has(i)) free.push(i);
+    // Bereich nur nutzen, solange er höchstens zu ~2/3 belegt ist (sonst wirkt es wieder fortlaufend)
+    if (free.length > (hi - lo + 1) / 3) return free[crypto.randomInt(free.length)];
+  }
+  return room.nextId++ + 10000;
+}
+
 function newPlayer(room, reg) {
-  const id = room.nextId++;
+  const id = newPlayerId(room);
   const r = reg && reg.email ? reg : { email: null, name: `nutzer${id}`, birthYear: null, avatar: normalizeAvatar(reg?.avatar) || randomAvatar(), consent: { agb: true, newsletter: true, agbOpened: false, agbMs: 0 } };
   const p = {
     id, token: rid(18), avatar: r.avatar, email: r.email, name: r.name, birthYear: r.birthYear, consent: r.consent, mailRead: {},

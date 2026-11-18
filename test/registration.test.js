@@ -41,7 +41,9 @@ test('Postfach: personalisierte Werbe-Mails nur mit Newsletter-Häkchen, Abmeldu
   const no = G.actions.join(r, null, reg('sky', { newsletter: false }));
   const others = Array.from({ length: 6 }, (_, i) => G.actions.join(r, null, reg(`bot${i}x`)));
   G.actions.setPhase(r, null, { phase: 'feed' });
-  for (const p of [yes, no, ...others]) for (const x of ROUND1.slice(0, 5)) G.actions.like(r, p, { postId: x.id });
+  // „yes“ liked am meisten und gehört damit sicher zu den Zielgruppen (IDs sind zufällig, Gleichstände hängen nicht mehr an der Reihenfolge)
+  for (const x of ROUND1.slice(0, 10)) G.actions.like(r, yes, { postId: x.id });
+  for (const p of [no, ...others]) for (const x of ROUND1.slice(0, 5)) G.actions.like(r, p, { postId: x.id });
   for (const ph of ['auswertung', 'werbung']) G.actions.setPhase(r, null, { phase: ph });
   G.actions.autoAds?.(r, null, {});
   G.actions.setPhase(r, null, { phase: 'empfang' });
