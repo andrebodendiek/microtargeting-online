@@ -64,3 +64,19 @@ test('Postfach: personalisierte Werbe-Mails nur mit Newsletter-Häkchen, Abmeldu
   const pv = G.playerView(r, no);
   assert.ok(pv.mail && Number.isInteger(pv.mail.unread));
 });
+
+test('Migration ersetzt unveränderte alte Standardbeiträge, eigene bleiben', async () => {
+  const fs = await import('node:fs'); const os = await import('node:os'); const path = await import('node:path');
+  const { ContentStore } = await import('../src/content-store.js');
+  const { DEFAULT_CONTENT } = await import('../public/shared/content.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bubbl-mig-'));
+  const old = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+  old.posts[0].headline = 'Shopping-Gutschein zu gewinnen!';
+  old.posts[1].headline = 'Mein eigener Beitrag';
+  fs.writeFileSync(path.join(dir, 'content.json'), JSON.stringify({ current: old, history: [], suggestions: [] }));
+  const st = new ContentStore(dir);
+  assert.equal(st.current.posts[0].headline, DEFAULT_CONTENT.posts[0].headline);
+  assert.equal(st.current.posts[1].headline, 'Mein eigener Beitrag');
+  assert.equal(new ContentStore(dir).data.postsVersion, '2026-11');
+  fs.rmSync(dir, { recursive: true, force: true });
+});

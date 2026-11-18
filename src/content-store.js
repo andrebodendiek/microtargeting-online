@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { CATEGORIES, PAGES, DEFAULT_CONTENT } from '../public/shared/content.js';
+import { LEGACY_HEADLINES } from './legacy-posts.js';
 
 const CAT_IDS = new Set(CATEGORIES.map((c) => c.id));
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -59,9 +60,23 @@ export function validatePost(p, i = 0) {
   return {
     id: p.id, cat: p.cat, page: p.page, round: p.round === 2 ? 2 : 1,
     time: str(p.time || '1 Std.', 14, `${f} Zeit`), art: emojiList(p.art, `${f} Bild`), bg: colors(p.bg, `${f} Farben`),
-    headline: str(p.headline, 100, `${f} Überschrift`), teaser: str(p.teaser, 360, `${f} Anreißer`), body: str(p.body, 700, `${f} Text`),
+    headline: str(p.headline, 100, `${f} Überschrift`), teaser: str(p.teaser, 400, `${f} Anreißer`), body: str(p.body, 900, `${f} Text`),
     image: validateImage(p.image, f),
+    ...postExtras(p, f),
   };
+}
+// Realismus-Angaben (alle optional): Format, Videolänge, bezahlte Partnerschaft, Hashtags, Reichweite, Top-Kommentar
+const count = (v) => (Number.isInteger(v) && v >= 0 ? Math.min(v, 99_999_999) : 0);
+function postExtras(p, f) {
+  const out = { format: ['link', 'photo', 'video'].includes(p.format) ? p.format : 'link' };
+  if (out.format === 'video' && typeof p.duration === 'string' && /^\d{1,2}:\d{2}$/.test(p.duration)) out.duration = p.duration;
+  if (p.sponsored) out.sponsored = str(p.sponsored, 40, `${f} Werbepartner`);
+  if (Array.isArray(p.tags)) out.tags = p.tags.slice(0, 5).map((t, i) => str(String(t), 30, `${f} Hashtag ${i + 1}`).replace(/^#/, '').replace(/[^\p{L}\p{N}_]/gu, '')).filter(Boolean);
+  if (p.stats && typeof p.stats === 'object') out.stats = { likes: count(p.stats.likes), comments: count(p.stats.comments), shares: count(p.stats.shares) };
+  if (p.comment && typeof p.comment === 'object' && p.comment.text) {
+    out.comment = { user: str(String(p.comment.user || 'nutzer'), 24, `${f} Kommentar-Name`).replace(/[^a-z0-9._]/gi, '').slice(0, 24) || 'nutzer', text: str(p.comment.text, 160, `${f} Kommentar`), likes: count(p.comment.likes) };
+  }
+  return out;
 }
 export function validateAd(a, i = 0, { withCats = true } = {}) {
   const f = `Anzeige ${a?.label || i + 1}`;
@@ -145,12 +160,23 @@ export function applyItems(content, items) {
   return validateContent(c);
 }
 
+const POSTS_VERSION = '2026-11';
 export class ContentStore {
   constructor(dir) {
     this.file = path.join(dir, 'content.json');
     this.data = { current: null, history: [], suggestions: [], automation: { schedule: 'off', autoApply: false, focus: '', lastRun: 0 } };
     try { Object.assign(this.data, JSON.parse(fs.readFileSync(this.file, 'utf8'))); } catch { /* erster Start */ }
     if (this.data.current) { try { this.data.current = validateContent(this.data.current); } catch (e) { console.error('Gespeicherte Inhalte ungültig, nutze Standard:', e.message); this.data.current = null; } }
+    if (this.data.current && this.data.postsVersion !== POSTS_VERSION) this.migratePosts();
+  }
+  // Einmalig: unverändert gebliebene alte Standardbeiträge durch die aktuellen ersetzen (eigene Beiträge bleiben)
+  migratePosts() {
+    const fresh = new Map(DEFAULT_CONTENT.posts.map((p) => [p.id, p]));
+    let n = 0;
+    const posts = this.data.current.posts.map((p) => (LEGACY_HEADLINES.has(p.headline) && fresh.has(p.id) ? (n++, clone(fresh.get(p.id))) : p));
+    this.data.postsVersion = POSTS_VERSION;
+    if (n) { this.save({ ...this.data.current, posts }, `Beiträge aktualisiert (Stand ${POSTS_VERSION}): ${n} Standardbeiträge ersetzt`, 'System'); console.log(`Inhalte: ${n} alte Standardbeiträge aktualisiert`); }
+    else this.persist();
   }
   get current() { return this.data.current || DEFAULT_CONTENT; }
   persist() {

@@ -14,7 +14,7 @@ const nullable = (schema) => ({ anyOf: [schema, { type: 'null' }] });
 const strArr = { type: 'array', items: { type: 'string' } };
 const POST_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['cat', 'page', 'round', 'time', 'art', 'bg', 'headline', 'teaser', 'body', 'image_query'],
+  required: ['cat', 'page', 'round', 'time', 'art', 'bg', 'headline', 'teaser', 'body', 'image_query', 'format', 'duration', 'sponsored', 'tags', 'stats', 'comment'],
   properties: {
     image_query: { type: 'string', description: 'Kurzer ENGLISCHER Suchbegriff für ein passendes freies Foto (2-4 Wörter, keine Marken, keine Prominenten), z. B. "skatepark ramp"' },
     cat: { type: 'string', enum: CAT_IDS }, page: { type: 'string', enum: PAGE_KEYS }, round: { type: 'integer', enum: [1, 2] },
@@ -23,6 +23,12 @@ const POST_SCHEMA = {
     bg: { ...strArr, description: 'Genau zwei helle, freundliche Verlaufsfarben im Format #rrggbb' },
     headline: { type: 'string', description: 'max. 100 Zeichen' }, teaser: { type: 'string', description: 'Anreißer, max. 300 Zeichen, endet mit …' },
     body: { type: 'string', description: 'Fortsetzung des Artikels, 2-3 Sätze' },
+    format: { type: 'string', enum: ['link', 'photo', 'video'], description: 'link = Nachrichtenartikel, photo = Foto-Post, video = kurzer Clip' },
+    duration: { type: 'string', description: 'Nur bei video: Länge im Format m:ss, sonst leer' },
+    sponsored: { type: 'string', description: 'Name des (fiktiven) Werbepartners bei bezahlter Partnerschaft eines Creators, sonst leer' },
+    tags: { ...strArr, description: '2-4 realistische Hashtags ohne #' },
+    stats: { type: 'object', additionalProperties: false, required: ['likes', 'comments', 'shares'], properties: { likes: { type: 'integer' }, comments: { type: 'integer' }, shares: { type: 'integer' } } },
+    comment: { type: 'object', additionalProperties: false, required: ['user', 'text', 'likes'], description: 'Realistischer Top-Kommentar eines (fiktiven) Jugendlichen', properties: { user: { type: 'string' }, text: { type: 'string' }, likes: { type: 'integer' } } },
   },
 };
 const AD_SCHEMA = {
@@ -77,6 +83,7 @@ Das Spiel: SchülerInnen liken Beiträge eines fiktiven sozialen Netzwerks in 7 
 
 Regeln für deine Vorschläge:
 - Beiträge wirken wie echte Social-Media-Posts mit aktuellen, für Jugendliche interessanten Themen. Nutze die Websuche, um aktuelle Anlässe zu finden, formuliere aber selbst (keine Zitate, keine Links).
+- Wirke realistisch wie ein echtes Netzwerk: Mische die Formate (link = Artikel eines Nachrichtenkontos, photo/video = Post eines Creators oder Lokalkontos), passende Reichweitenzahlen (stats), 2-4 Hashtags und einen glaubwürdigen Top-Kommentar. Creator-Posts haben gelegentlich eine bezahlte Partnerschaft (sponsored = fiktiver Werbepartner) mit Rabattcode im Text. Konten (page): ${Object.entries(PAGES).map(([k, p]) => `${k} = ${p.name} (${p.kind}${p.cat ? `, ${p.cat}` : ''})`).join('; ')}.
 - Jeder Beitrag passt eindeutig in GENAU eine Kategorie – sonst funktioniert die Auswertung nicht. Kategorien bleiben ausgewogen (Runde 1: 3-4 Beiträge je Kategorie).
 - Nur fiktive Marken, fiktive Personen und die fiktive Partei. Keine echten Parteien, Politiker*innen, Influencer*innen oder Unternehmen als Werbetreibende. Echte Ereignisse, Orte, Sportwettbewerbe und Studien dürfen als Thema vorkommen.
 - Altersgerecht, sachlich korrekt, ohne Gewalt, Angstmache oder Diskriminierung. Deutsch, Schreibweise mit Gendersternchen wie im Bestand.

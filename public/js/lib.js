@@ -173,11 +173,23 @@ export const PostArt = ({ post, small }) => post.image ? html`
     ${post.art[2] && html`<span class="art-3">${post.art[2]}</span>`}
   </div>`;
 
+// Profilbild eines Kontos: Creator mit Gesicht (Avatar-Baukasten), Medien mit Monogramm
+const hashStr = (t) => { let h = 2166136261; for (const ch of t) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const seeded = (seed) => () => { seed = (Math.imul(seed ^ (seed >>> 15), 2246822507) + 0x9e3779b9) >>> 0; return seed / 4294967296; };
+export const AccountPic = ({ page, size = 40 }) => {
+  if (!page) return null;
+  if (page.kind === 'creator') return html`<span class="acc-pic story" style=${`--s:${size}px`}><${AvatarArt} cfg=${randomAvatar(seeded(hashStr(page.handle)))} size=${size - 6} /></span>`;
+  const ini = page.name.replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  return html`<span class="acc-pic mono" style=${`--s:${size}px;--c:${page.color || '#0C5D6A'}`}>${ini}</span>`;
+};
+export const fmtCount = (n) => (n >= 1e6 ? `${(n / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Mio.` : n >= 1e5 ? `${Math.round(n / 1e3)} Tsd.` : n.toLocaleString('de-DE'));
+
 export const PageHead = ({ post, extra }) => {
-  const pg = PAGES[post.page];
+  const pg = PAGES[post.page] || { name: post.page, handle: post.page };
   return html`<div class="post-head">
-    <span class="page-av">${pg.avatar}</span>
-    <div class="page-meta"><b>${pg.name} <span class="verified" title="verifiziert">✓</span></b><small>@${pg.handle} · ${post.time}</small></div>
+    <${AccountPic} page=${pg} />
+    <div class="page-meta"><b>${pg.name}${pg.verified !== false && html` <i class="bi bi-patch-check-fill verified-badge" title="verifiziertes Konto"></i>`}</b>
+      ${post.sponsored ? html`<small class="partner">Bezahlte Partnerschaft mit <b>${post.sponsored}</b></small>` : html`<small>@${pg.handle} · ${post.time}${pg.followers ? ` · ${pg.followers} Follower` : ''}</small>`}</div>
     ${extra}
   </div>`;
 };

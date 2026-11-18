@@ -2,14 +2,14 @@
 export const IMAGES = {
   "c1": {
     "src": "/img/content/c1.webp",
-    "alt": "ELIZABETH SHAW CHOCOLATE FACTORY 2",
+    "alt": "Christmas market in Stockholm Old Town",
     "credit": {
-      "id": "aeab2005-d6af-449e-a6d9-901455133fe3",
-      "title": "ELIZABETH SHAW CHOCOLATE FACTORY 2",
-      "creator": "A QUIVERFUL OF FOTOS",
+      "id": "0fd4f8bc-242f-42aa-a565-564aabd679a9",
+      "title": "Christmas market in Stockholm Old Town",
+      "creator": "Michael Cavén",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/43726958@N08/4232624879",
+      "url": "https://www.flickr.com/photos/29241649@N02/4206886224",
       "source": "flickr"
     }
   },
@@ -54,27 +54,27 @@ export const IMAGES = {
   },
   "c5": {
     "src": "/img/content/c5.webp",
-    "alt": "Jeni's Ice Cream! Scooped",
+    "alt": "Hot Chocolate Mug",
     "credit": {
-      "id": "49cbf674-2d86-43d3-8196-c1e5a9c7de71",
-      "title": "Jeni's Ice Cream! Scooped",
-      "creator": "Breville USA",
+      "id": "254315df-2422-434c-9e1b-f056fa7f2496",
+      "title": "Hot Chocolate Mug",
+      "creator": "nick.amoscato",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/38102750@N06/14490767236",
+      "url": "https://www.flickr.com/photos/91374488@N07/38614148644",
       "source": "flickr"
     }
   },
   "c6": {
     "src": "/img/content/c6.webp",
-    "alt": "Gummy bears",
+    "alt": "Project 365 #334: 301111 Just In Time",
     "credit": {
-      "id": "a5f8f6ba-9c2a-436a-8bb0-7fc9f6f5bd2d",
-      "title": "Gummy bears",
-      "creator": "DOH4",
-      "license": "CC BY 2.0",
-      "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/30884177@N08/6101051794",
+      "id": "c7d2ce89-0d19-4b91-a19e-80a4e2b40ecb",
+      "title": "Project 365 #334: 301111 Just In Time",
+      "creator": "comedy_nose",
+      "license": "Public Domain",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "url": "https://www.flickr.com/photos/23408922@N07/6433160501",
       "source": "flickr"
     }
   },
@@ -249,15 +249,15 @@ export const IMAGES = {
   },
   "m3": {
     "src": "/img/content/m3.webp",
-    "alt": "Makeup Brush on White Background",
+    "alt": "Food boxes enter the more",
     "credit": {
-      "id": "c2e7504f-6b3b-4e1e-a4ed-3bc772312a5d",
-      "title": "Makeup Brush on White Background",
-      "creator": "Trostle",
-      "license": "CC BY 2.0",
-      "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/42183150@N00/6848775772",
-      "source": "flickr"
+      "id": "f9277e79-c211-4fe2-a8ec-0b0448bd2bd2",
+      "title": "Food boxes enter the more",
+      "creator": "U.S. Department of Agriculture",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "url": "https://www.rawpixel.com/image/3261721/free-photo-image-cardboard-boxes-parcel-box",
+      "source": "rawpixel"
     }
   },
   "m4": {
@@ -327,14 +327,14 @@ export const IMAGES = {
   },
   "n2": {
     "src": "/img/content/n2.webp",
-    "alt": "Forest Path in the Ardennes",
+    "alt": "Sandhill Cranes at Sunset Huron Wetland Management District South Dakota",
     "credit": {
-      "id": "d5c271e0-673a-478e-89eb-57a794ad5eae",
-      "title": "Forest Path in the Ardennes",
-      "creator": "*rboed*",
-      "license": "CC BY 2.0",
-      "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/92082510@N04/13959130744",
+      "id": "3494b26e-1631-49f9-b8fc-1493e2c2850d",
+      "title": "Sandhill Cranes at Sunset Huron Wetland Management District South Dakota",
+      "creator": "USFWS Mountain Prairie",
+      "license": "Public Domain",
+      "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "url": "https://www.flickr.com/photos/51986662@N05/52902375041",
       "source": "flickr"
     }
   },
@@ -353,14 +353,14 @@ export const IMAGES = {
   },
   "n4": {
     "src": "/img/content/n4.webp",
-    "alt": "Red Deer Stag",
+    "alt": "Igel im Herbstlaub",
     "credit": {
-      "id": "8d04c312-0826-4e4f-8b7b-a5c6d9fb156d",
-      "title": "Red Deer Stag",
-      "creator": "cazalegg",
+      "id": "aa83550e-a4e9-4a48-8d12-a224f7026a5a",
+      "title": "",
+      "creator": "bwelmlov88",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/128941223@N02/52074783851",
+      "url": "https://www.flickr.com/photos/183146176@N07/48889928097",
       "source": "flickr"
     }
   },
@@ -379,14 +379,14 @@ export const IMAGES = {
   },
   "n6": {
     "src": "/img/content/n6.webp",
-    "alt": "Perseids, again",
+    "alt": "The Aurora Borealis - Ivalo, Lapland - Travel photography",
     "credit": {
-      "id": "345ff9b6-c22e-4dab-a7d2-1834554ce5e9",
-      "title": "Perseids, again",
-      "creator": "snowpeak",
+      "id": "33e6687a-e28e-41eb-a98f-3279d445655f",
+      "title": "The Aurora Borealis - Ivalo, Lapland - Travel photography",
+      "creator": "Giuseppe Milo (www.pixael.com)",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/53986933@N00/9495887487",
+      "url": "https://www.flickr.com/photos/87690240@N03/47499809651",
       "source": "flickr"
     }
   },
@@ -444,14 +444,14 @@ export const IMAGES = {
   },
   "s1": {
     "src": "/img/content/s1.webp",
-    "alt": "Soccer",
+    "alt": "HandBall Masculin France Norvege 095",
     "credit": {
-      "id": "c9b7a366-843f-4d0f-a6e2-f19a0eb5c7d5",
-      "title": "Soccer",
-      "creator": "pbkwee",
+      "id": "3b3fa73d-71b7-4ccb-8529-0d4b80eb6dc0",
+      "title": "HandBall Masculin France Norvege 095",
+      "creator": "alainalele",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/11704829@N00/7794221892",
+      "url": "https://www.flickr.com/photos/29512314@N02/8625639190",
       "source": "flickr"
     }
   },
@@ -509,14 +509,14 @@ export const IMAGES = {
   },
   "s6": {
     "src": "/img/content/s6.webp",
-    "alt": "Beach Volleyball",
+    "alt": "Cross-Country Skiing in Aspen, Colorado",
     "credit": {
-      "id": "dfdd6ec8-42f2-432f-b77e-d525e614a936",
-      "title": "Beach Volleyball",
-      "creator": "garryknight",
+      "id": "3612b5b3-0a8b-4a27-9a8d-11b0606f1101",
+      "title": "Cross-Country Skiing in Aspen, Colorado",
+      "creator": "richpalpine",
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/8176740@N05/6046967177",
+      "url": "https://www.flickr.com/photos/76081760@N03/8381075366",
       "source": "flickr"
     }
   },
@@ -561,19 +561,6 @@ export const IMAGES = {
   },
   "t1": {
     "src": "/img/content/t1.webp",
-    "alt": "Team of Professional eSport Gamers Playing in Competitive Video Games on a Cyber Games Tournament - Credit to https://www.lyncconf.com/",
-    "credit": {
-      "id": "28652993-4488-4c3d-9936-7f708d748931",
-      "title": "Team of Professional eSport Gamers Playing in Competitive Video Games on a Cyber Games Tournament - Credit to https://www.lyncconf.com/",
-      "creator": "nodstrum",
-      "license": "CC BY 2.0",
-      "license_url": "https://creativecommons.org/licenses/by/2.0/",
-      "url": "https://www.flickr.com/photos/156259214@N05/28450148127",
-      "source": "flickr"
-    }
-  },
-  "t2": {
-    "src": "/img/content/t2.webp",
     "alt": "Xbox 360 Gamepad Controller Blurry Buttons and Joystick",
     "credit": {
       "id": "8c753973-dfa3-4e95-a5b5-0eb80cc0b25b",
@@ -582,6 +569,19 @@ export const IMAGES = {
       "license": "CC BY 2.0",
       "license_url": "https://creativecommons.org/licenses/by/2.0/",
       "url": "https://www.flickr.com/photos/21051491@N02/15456679742",
+      "source": "flickr"
+    }
+  },
+  "t2": {
+    "src": "/img/content/t2.webp",
+    "alt": "Team of Professional eSport Gamers Playing in Competitive Video Games on a Cyber Games Tournament - Credit to https://www.lyncconf.com/",
+    "credit": {
+      "id": "28652993-4488-4c3d-9936-7f708d748931",
+      "title": "Team of Professional eSport Gamers Playing in Competitive Video Games on a Cyber Games Tournament - Credit to https://www.lyncconf.com/",
+      "creator": "nodstrum",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0/",
+      "url": "https://www.flickr.com/photos/156259214@N05/28450148127",
       "source": "flickr"
     }
   },

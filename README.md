@@ -23,6 +23,9 @@ Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna R
 
 Fachdidaktischer Fokus: Neben der gesellschaftlichen Perspektive (Manipulation, Filterblase, Fairness) wird die technische Seite sichtbar – Datenformate (JSON), Client-Server-Kommunikation, gewichtete Bewertungsfunktionen, Bewertung von Klassifikatoren (Präzision, Recall, F1, Wahrheitsmatrix), Trainings- und Testdaten, Overfitting, Proxy-Merkmale, Rechte nach DSGVO.
 
+## Realistische Beiträge (Stand November 2026)
+Der Feed sieht aus wie ein echtes Netzwerk: Nachrichtenkonten posten Artikel mit Vorschaukarte und Domain, Creator posten Fotos und Clips (mit Videolänge), teils als **„Bezahlte Partnerschaft“ mit Rabattcode** (Schleichwerbung erkennen!). Jeder Beitrag hat Reichweite (Likes, Kommentare, Shares), Hashtags und einen Top-Kommentar. Die Themen greifen das aktuelle Geschehen auf: Black Friday, EU-Gebühr auf Temu-/Shein-Pakete, Weltklimakonferenz COP31 in Antalya, Handball-Heim-WM 2027, Release von GTA VI (ab 18), Debatte um eine Social-Media-Altersgrenze, Zuckersteuer, Weihnachtsmärkte, Kraniche und Kegelrobben an der Küste u. v. m. Alle Konten, Personen und Marken sind fiktiv. Bereits gespeicherte Inhalte werden beim ersten Start einmalig aktualisiert (nur unveränderte alte Standardbeiträge, eigene bleiben erhalten).
+
 ## Inhalts-Editor mit KI-Assistent
 
 Unter **/editor** (Lehrkraft-Anmeldung nötig) lassen sich alle Inhalte bearbeiten: Beiträge, Werbeanzeigen (inkl. Lösung und Trainings-/Test-Reihenfolge), Wahlbotschaften, Quizfragen und das Fairness-Szenario. Jede Speicherung wird geprüft und im Verlauf versioniert (Wiederherstellen jederzeit möglich). Neue Räume übernehmen den aktuellen Stand; ein bestehender Raum kann ihn in der Lobby über „Neueste Inhalte übernehmen“ laden.

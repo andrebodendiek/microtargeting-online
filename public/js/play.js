@@ -1,6 +1,6 @@
 import {
   html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, SelectMenu, AvatarBuilder, AvatarArt, randomAvatar, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
-  PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
+  PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE, PAGES, fmtCount,
 } from './lib.js';
 import { ADS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
 import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
@@ -61,50 +61,72 @@ const Share = () => html`<svg viewBox="0 0 24 24" width="26" height="26" fill="n
 const Bookmark = () => html`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
 
 // ------------------------------------------------------------------ Bausteine
+const PAGE = (post) => PAGES[post.page] || { name: post.page, handle: post.page };
+const Tags = ({ tags }) => tags?.length ? html`<span class="post-tags">${tags.map((t) => html`<span>#${t}</span>`)}</span>` : null;
+const likeText = (post, liked) => { const n = (post.stats?.likes || 0) + (liked ? 1 : 0); return n ? html`Gefällt <b>${fmtCount(n)}</b> Mal` : liked ? 'Dir gefällt das' : 'Sei die erste Person, der das gefällt'; };
+
 function Post({ post, liked, canLike, onLike, onOpen, note }) {
   const ref = useRef(null);
   const [burst, setBurst] = useState(0);
   const lastTap = useRef(0);
   useEffect(() => { const el = ref.current; tracker.observe(el); return () => tracker.unobserve(el); }, []);
   const like = () => { if (!liked && !canLike) return; if (!liked) setBurst((b) => b + 1); onLike(); };
-  const tapArt = () => { const t = Date.now(); if (t - lastTap.current < 320) { if (!liked) like(); else setBurst((b) => b + 1); } lastTap.current = t; };
-  return html`<article class="post card" data-post=${post.id} ref=${ref}>
-    <${PageHead} post=${post} extra=${note && html`<span class="post-note">${note}</span>`} />
+  const tapArt = () => { const t = Date.now(); if (t - lastTap.current < 320) { if (!liked) like(); else setBurst((b) => b + 1); } else if (post.format === 'link') setTimeout(() => { if (Date.now() - lastTap.current >= 320) onOpen(post); }, 330); lastTap.current = t; };
+  const pg = PAGE(post);
+  const st = post.stats || {};
+  const isLink = (post.format || 'link') === 'link';
+  return html`<article class=${`post card fmt-${post.format || 'link'}`} data-post=${post.id} ref=${ref}>
+    <${PageHead} post=${post} extra=${html`${note && html`<span class="post-note">${note}</span>`}<i class="bi bi-three-dots post-more" aria-hidden="true"></i>`} />
+    ${isLink && html`<p class="post-caption top">${post.teaser}</p>`}
     <div class="art-wrap" onClick=${tapArt}>
       <${PostArt} post=${post} />
+      ${post.format === 'video' && html`<span class="play-btn" aria-hidden="true"><i class="bi bi-play-fill"></i></span><span class="vid-dur">${post.duration || '0:30'}</span>`}
       ${burst > 0 && html`<span class="heart-burst" key=${burst}>❤️</span>`}
     </div>
+    ${isLink && html`<button class="link-card" onClick=${() => onOpen(post)}><small>${(pg.domain || `${pg.handle}.de`).toUpperCase()}</small><b>${post.headline}</b></button>`}
     <div class="post-actions">
       <button class=${`icon-btn like-btn ${liked ? 'on' : ''}`} disabled=${!liked && !canLike} onClick=${like} aria-pressed=${liked} aria-label="Gefällt mir"><${Heart} /></button>
       <button class="icon-btn" aria-label="Kommentieren" onClick=${() => onOpen(post)}><${Comment} /></button>
       <button class="icon-btn" aria-label="Teilen"><${Share} /></button>
+      ${st.shares > 0 && html`<small class="muted share-n">${fmtCount(st.shares)}× geteilt</small>`}
       <span class="spacer"></span>
       <button class="icon-btn" aria-label="Merken"><${Bookmark} /></button>
     </div>
     <div class="post-body">
-      ${liked && html`<small class="liked-note">Dir gefällt das</small>`}
-      <h3>${post.headline}</h3>
-      <p>${post.teaser}</p>
-      <button class="read-more" onClick=${() => onOpen(post)}>Weiterlesen</button>
+      <div class="like-line">${likeText(post, liked)}</div>
+      ${!isLink && html`<p class="post-caption"><b>${pg.handle}</b> <span class="cap-head">${post.headline}</span> ${post.teaser} <button class="read-more inline" onClick=${() => onOpen(post)}>mehr</button></p>`}
+      <${Tags} tags=${post.tags} />
+      ${st.comments > 0 && html`<button class="comments-link" onClick=${() => onOpen(post)}>Alle ${fmtCount(st.comments)} Kommentare ansehen</button>`}
+      ${post.comment && html`<p class="top-comment"><b>${post.comment.user}</b> ${post.comment.text}</p>`}
+      <small class="post-time">${post.time === '1 Tag' ? 'gestern' : `vor ${post.time.replace('Std.', 'Stunden').replace('Tage', 'Tagen')}`}</small>
     </div>
   </article>`;
 }
 
 function ArticleSheet({ post, onClose, liked, canLike, onLike }) {
   useEffect(() => { tracker.open(post.id); return () => tracker.close(); }, [post.id]);
+  const pg = PAGE(post);
+  const isLink = (post.format || 'link') === 'link';
+  const text = `${post.teaser.replace(/\s*…$/, '')} ${post.body.replace(/^…\s*/, '')}`;
   return html`<div class="sheet-backdrop" onClick=${onClose}>
-    <div class="sheet" onClick=${(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <div class="sheet" onClick=${(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label=${post.headline}>
       <div class="sheet-grip"></div>
-      <${PageHead} post=${post} extra=${html`<button class="icon-btn" onClick=${onClose} aria-label="Schließen">✕</button>`} />
-      <${PostArt} post=${post} />
+      ${isLink && html`<div class="browser-bar"><i class="bi bi-lock-fill"></i> ${pg.domain || `${pg.handle}.de`}<button class="icon-btn ms-auto" onClick=${onClose} aria-label="Schließen"><i class="bi bi-x-lg"></i></button></div>`}
+      ${!isLink && html`<${PageHead} post=${post} extra=${html`<button class="icon-btn ms-auto" onClick=${onClose} aria-label="Schließen"><i class="bi bi-x-lg"></i></button>`} />`}
+      ${isLink && html`<div class="article-head"><small class="kicker">${CAT[post.cat]?.name}</small><h2>${post.headline}</h2><small class="muted">${pg.name} · vor ${post.time}</small></div>`}
+      <div class="art-wrap"><${PostArt} post=${post} />${post.format === 'video' && html`<span class="play-btn" aria-hidden="true"><i class="bi bi-play-fill"></i></span><span class="vid-dur">${post.duration || '0:30'}</span>`}</div>
       <div class="post-body article">
         <${Credit} image=${post.image} />
-        <h3>${post.headline}</h3>
-        <p>${post.teaser.replace(/\s*…$/, '')} ${post.body.replace(/^…\s*/, '')}</p>
+        ${!isLink && html`<h3>${post.headline}</h3>`}
+        <p>${text}</p>
+        <${Tags} tags=${post.tags} />
         <div class="article-actions">
           <button class=${`btn ${liked ? 'liked' : ''}`} disabled=${!liked && !canLike} onClick=${onLike}>${liked ? '❤️ Gefällt dir' : '🤍 Gefällt mir'}</button>
           <button class="btn btn-ghost" onClick=${onClose}>Zurück zum Feed</button>
         </div>
+        ${post.comment && html`<div class="comments"><b>Kommentare (${fmtCount(post.stats?.comments || 1)})</b>
+          <div class="comment"><span class="c-av"><i class="bi bi-person-fill"></i></span><div><b>${post.comment.user}</b> ${post.comment.text}<small class="muted">${fmtCount(post.comment.likes || 0)} „Gefällt mir“ · Antworten</small></div></div>
+          <small class="muted">Kommentare sind in diesem Spiel nur zum Lesen.</small></div>`}
       </div>
     </div>
   </div>`;
@@ -138,6 +160,7 @@ function PhaseFlash({ phase }) {
     <div class="flash-inner"><span class="flash-icon">${p.icon}</span><small>Neuer Schritt</small><h2>${p.title}</h2></div>
   </div>`;
 }
+
 
 // ------------------------------------------------------------------ Phasen
 function Lobby({ v, act }) {
