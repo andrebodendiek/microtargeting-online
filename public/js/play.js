@@ -1,8 +1,8 @@
 import {
-  html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
+  html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, SelectMenu, AvatarBuilder, AvatarArt, randomAvatar, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
   PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
-import { ADS, AVATARS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
+import { ADS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
 import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
 
 const code = (qs.get('c') || '').toUpperCase();
@@ -141,19 +141,17 @@ function PhaseFlash({ phase }) {
 
 // ------------------------------------------------------------------ Phasen
 function Lobby({ v, act }) {
+  const [edit, setEdit] = useState(false);
   return html`<section class="stagger bb-col">
     <div class="glass hero-card">
-      <${Avatar} avatar=${v.me.avatar} size=${96} />
+      <${Avatar} avatar=${v.me.avatar} size=${104} />
+      ${v.me.email && html`<b class="me-mail"><i class="bi bi-envelope"></i> ${v.me.email}</b>`}
       <small class="muted">Deine Nutzer-ID</small>
       <div class="big-id">#${v.me.id}</div>
       <p class="muted">Merke dir diese Nummer – sie ist dein „Name“ im Netzwerk.</p>
+      <button class="btn btn-sm" onClick=${() => setEdit(!edit)}><i class=${`bi bi-${edit ? 'check-lg' : 'brush'}`}></i> ${edit ? 'Fertig' : 'Profilbild ändern'}</button>
     </div>
-    <div class="glass pad">
-      <h3>Profilbild wählen</h3>
-      <div class="avatar-grid">
-        ${AVATARS.map((a) => html`<button class=${`av-pick ${a === v.me.avatar ? 'on' : ''}`} onClick=${() => act('avatar', { avatar: a })}>${a}</button>`)}
-      </div>
-    </div>
+    ${edit && html`<div class="glass pad"><${AvatarBuilder} value=${v.me.avatar && typeof v.me.avatar === 'object' ? v.me.avatar : randomAvatar()} onChange=${(a) => act('avatar', { avatar: a })} /></div>`}
     <div class="waiting glass"><span class="dots"><i></i><i></i><i></i></span> Warte auf den Start durch die Lehrkraft …</div>
   </section>`;
 }
@@ -323,6 +321,7 @@ function Profil({ v, act }) {
         </div>`; })}
       </div>
     </div>
+    ${v.consentReveal && html`<${ConsentReveal} c=${v.consentReveal} />`}
     <${TrackingInspector} log=${v.trackLog} />
     <${Auskunft} code=${v.code} />
     ${pr.received.length > 0 && html`<div class="glass pad"><h3>Deshalb hast du diese Werbung bekommen</h3><div class="other-ads">${pr.received.map((id) => html`<div class="other-ad"><${AdVisual} ad=${AD[id]} compact /><div class="bb-row wrap gap">${AD[id].cats.map((c) => html`<${CatChip} cat=${c} small />`)}</div></div>`)}</div></div>`}
@@ -401,6 +400,83 @@ function Reflexion({ v, act }) {
   </section>`;
 }
 
+// ------------------------------------------------------------------ bubbl-Postfach (simulierte E-Mails)
+const fmtTime = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+const FromIcon = ({ m }) => m.fromIcon === 'ad' ? html`<span class="mail-from ad"><i class="bi bi-bag-heart"></i></span>`
+  : m.fromIcon === 'party' ? html`<span class="mail-from party" style=${{ background: PARTY.color }}>${PARTY.logo}</span>`
+  : html`<span class="mail-from bubbl"><span class="logo-mark" style="--s:18px"><i></i></span></span>`;
+
+function MailBody({ m, act, v }) {
+  const d = m.data || {};
+  const why = (t) => html`<div class="mail-why"><i class="bi bi-info-circle"></i> <span>${t}</span></div>`;
+  const unsub = v.me.newsletter && html`<button class="link-btn mail-unsub" onClick=${() => act('unsubscribe')}>Newsletter abbestellen</button>`;
+  if (m.kind === 'ad') {
+    const ad = AD[d.ad];
+    return html`<div class="bb-col">
+      ${ad && html`<${AdVisual} ad=${ad} />`}
+      <p>Hallo ${v.me.name || 'du'},<br />weil du dich für <b>${(d.cats || []).map((c) => CAT[c]?.name).filter(Boolean).join(' und ') || 'tolle Dinge'}</b> interessierst, haben wir ein exklusives Angebot für dich:</p>
+      <div class="mail-code"><small>Dein persönlicher Code</small><b>${d.code}</b><small>gültig nur heute</small></div>
+      ${why(`Du erhältst diese Mail, weil du bei der Anmeldung dem Newsletter zugestimmt hast (das Häkchen war schon gesetzt) und dein Profil zur Zielgruppe „${ad?.product || 'Anzeige'}“ passt.`)}
+      ${unsub}
+    </div>`;
+  }
+  if (m.kind === 'recs') return html`<div class="bb-col"><p>Wir haben gesehen, was du magst. Diese Beiträge zu <b>${CAT[d.cat]?.name}</b> hast du noch nicht entdeckt:</p>
+    ${(d.posts || []).map((id) => POST[id] && html`<div class="mail-post"><${PostArt} post=${POST[id]} small /><b>${POST[id].headline}</b></div>`)}
+    ${why('Ausgewählt aus deinen Likes in der Kategorie, die du am häufigsten geliked hast.')}${unsub}</div>`;
+  if (m.kind === 'weekly') return html`<div class="bb-col"><p>Deine Woche auf bubbl: <b>${d.likes}</b> Likes – und <b>${Math.max(1, Math.round(d.ms / 1000))} Sekunden</b> mit <b>${CAT[d.cat]?.name}</b>.</p>
+    ${why('Diese Zahl stammt nicht aus deinen Likes, sondern aus dem heimlichen Tracking: wie lange du Beiträge angesehen und Artikel gelesen hast.')}${unsub}</div>`;
+  if (m.kind === 'party') return html`<div class="bb-col"><p><b>${m.subject.replace(/^[^,]*,\s*/, '')}</b></p><p>${m.preview}</p>
+    ${why('Politische Organisationen können Zielgruppen genauso buchen wie Firmen. Andere bekommen andere Versprechen.')}</div>`;
+  if (m.kind === 'nooffers') return html`<div class="bb-col"><p>${m.preview}</p>${why('Du hast den Newsletter abgelehnt oder abbestellt – deshalb bekommst du keine Angebote. Diese „Schade“-Mail ist trotzdem ein Versuch, dich umzustimmen (Confirmshaming).')}</div>`;
+  if (m.kind === 'miss') return html`<div class="bb-col"><p>${m.preview}</p><div class="mail-code"><small>Comeback-Code</small><b>COMEBACK10</b></div>${why('„Wir vermissen dich“-Mails sollen dich zurück in die App holen – mehr Zeit in der App bedeutet mehr Daten und mehr Werbung.')}${unsub}</div>`;
+  return html`<div class="bb-col"><p>Schön, dass du da bist! Like Beiträge, die dir gefallen – dann zeigen wir dir mehr davon.</p><button class="btn btn-primary" disabled>E-Mail bestätigen</button>
+    ${why('Jede Registrierung beginnt mit einer Willkommens-Mail. Ab jetzt weiß bubbl, unter welcher Adresse es dich erreicht.')}</div>`;
+}
+
+function Postfach({ v, act, onClose }) {
+  const [open, setOpen] = useState(null);
+  const list = v.mail?.list || [];
+  const m = open && list.find((x) => x.id === open);
+  useEffect(() => { const k = (e) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
+  const show = (x) => { setOpen(x.id); if (!x.read) act('readMail', { id: x.id }); };
+  return html`<div class="sheet-backdrop" onClick=${onClose}><div class="sheet mailbox" onClick=${(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Postfach">
+    <div class="sheet-grip"></div>
+    <div class="mail-head">
+      ${m ? html`<button class="btn btn-sm" onClick=${() => setOpen(null)} aria-label="Zurück"><i class="bi bi-arrow-left"></i></button>` : html`<i class="bi bi-envelope-paper-heart mail-head-icon"></i>`}
+      <div><b>${m ? m.from : 'Posteingang'}</b><small class="muted">${v.me.email || ''}</small></div>
+      <button class="btn btn-sm ms-auto" onClick=${onClose} aria-label="Schließen"><i class="bi bi-x-lg"></i></button>
+    </div>
+    ${m ? html`<article class="mail-detail"><h3>${m.subject}</h3><small class="muted">${m.from} · ${fmtTime(m.at)}</small><${MailBody} m=${m} act=${act} v=${v} /></article>`
+      : list.length ? html`<ul class="mail-list">${list.map((x) => html`<li><button class=${`mail-item ${x.read ? '' : 'unread'}`} onClick=${() => show(x)}>
+          <${FromIcon} m=${x} /><span class="mail-text"><span class="mail-line"><b>${x.from}</b><small>${fmtTime(x.at)}</small></span><span class="mail-subj">${x.subject}</span><small class="muted mail-prev">${x.preview}</small></span></button></li>`)}</ul>`
+      : html`<p class="muted center pad">Noch keine Nachrichten.</p>`}
+  </div></div>`;
+}
+
+function MailButton({ v, act }) {
+  const [open, setOpen] = useState(false);
+  const n = v.mail?.unread || 0;
+  const prev = useRef(n);
+  const [ping, setPing] = useState(false);
+  useEffect(() => { if (n > prev.current) { setPing(true); navigator.vibrate?.(60); setTimeout(() => setPing(false), 1600); } prev.current = n; }, [n]);
+  return html`<button class=${`icon-btn mail-btn ${ping ? 'ping' : ''}`} onClick=${() => setOpen(true)} aria-label=${`Postfach, ${n} ungelesen`} title="Postfach">
+      <i class="bi bi-envelope"></i>${n > 0 && html`<span class="mail-badge">${n}</span>`}</button>
+    ${open && html`<${Postfach} v=${v} act=${act} onClose=${() => setOpen(false)} />`}`;
+}
+
+function ConsentReveal({ c }) {
+  return html`<div class="glass pad consent-reveal">
+    <span class="kicker"><i class="bi bi-envelope-exclamation"></i> Deine Anmeldung</span>
+    <h3>Was du bei der Anmeldung zugestimmt hast</h3>
+    <ul class="reveal-list">
+      <li class=${c.agbOpened ? 'ok' : 'warn'}><i class=${`bi bi-${c.agbOpened ? 'eye' : 'eye-slash'}`}></i><span>${c.agbOpened ? html`Du hast die Nutzungsbedingungen geöffnet – für <b>${Math.round(c.agbMs / 1000)} Sekunden</b>. Ganz gelesen hätte man sie in etwa 2 Minuten.` : html`Du hast die Nutzungsbedingungen <b>nicht geöffnet</b> – aber zugestimmt. Darin stand u. a.: <i>„Zusätzlich erfasst bubbl automatisch dein Nutzungsverhalten …“</i> und <i>„Dein Interessenprofil darf an Werbepartner und politische Organisationen weitergegeben werden.“</i>`}</span></li>
+      <li class=${c.newsletter ? 'warn' : 'ok'}><i class="bi bi-check2-square"></i><span>${c.newsletter ? html`Das Newsletter-Häkchen war <b>schon gesetzt</b> – und du hast es so gelassen. Deshalb bekommst du personalisierte Werbung an <b>${c.email}</b>.` : c.unsub ? html`Du hast den Newsletter später <b>abbestellt</b>. Gut so!` : html`Du hast das vorausgewählte Newsletter-Häkchen <b>entfernt</b>. Sehr aufmerksam!`}</span></li>
+      <li><i class="bi bi-envelope-paper"></i><span>Werbe-Mails in deinem Postfach: <b>${c.adMails}</b></span></li>
+    </ul>
+    <p class="muted small">Vorausgewählte Häkchen sind ein <b>Dark Pattern</b>. Nach DSGVO und Urteil des EuGH (Planet49, 2019) ist eine Einwilligung durch vorangekreuzte Kästchen <b>unwirksam</b>.</p>
+  </div>`;
+}
+
 // ------------------------------------------------------------------ Profil-Menü (oben rechts)
 function PlayerMenu({ v, act }) {
   async function auskunft() {
@@ -420,31 +496,92 @@ function PlayerMenu({ v, act }) {
 }
 
 // ------------------------------------------------------------------ App
+// AGB mit „versteckten“ Klauseln – wer liest die schon? (wird später im Datenprofil aufgedeckt)
+const AGB = [
+  ['1. Geltungsbereich', 'Diese Nutzungsbedingungen gelten für alle Dienste von bubbl, einschließlich Feed, Nachrichten, Postfach und Partnerangeboten.'],
+  ['2. Registrierung', 'Du versicherst, dass deine Angaben wahr sind. bubbl darf dein Konto jederzeit ohne Angabe von Gründen sperren.'],
+  ['3. Inhalte', 'Du räumst bubbl an allen Inhalten, die du hochlädst oder likest, ein weltweites, kostenloses Nutzungsrecht ein.'],
+  ['4. Nutzungsdaten', '4.1 bubbl speichert deine Likes. 4.2 Zusätzlich erfasst bubbl automatisch dein Nutzungsverhalten, z. B. wie lange du Beiträge ansiehst, welche Artikel du öffnest und wie weit du scrollst – auch wenn du nichts anklickst.'],
+  ['5. Profilbildung', 'Aus deinen Daten erstellt bubbl ein Interessenprofil und leitet Merkmale wie Alter, Kaufkraft oder politische Einstellung ab.'],
+  ['6. Personalisierung', 'Inhalte und Reihenfolge deines Feeds werden automatisch an dein Profil angepasst.'],
+  ['7. Weitergabe', '7.1 bubbl arbeitet mit Werbepartnern zusammen. 7.2 Werbepartner erhalten Zugriff auf Zielgruppen. 7.3 Dein Interessenprofil darf an Werbepartner und politische Organisationen weitergegeben werden.'],
+  ['8. Werbung', 'Werbung wird als „Gesponsert“ gekennzeichnet. Die Auswahl erfolgt automatisch anhand deines Profils.'],
+  ['9. E-Mail', '9.1 Mit deiner Anmeldung erhältst du Nachrichten von bubbl und ausgewählten Partnern. 9.2 Eine Abmeldung ist jederzeit möglich, kann aber bis zu 30 Tage dauern.'],
+  ['10. Speicherdauer', 'Deine Daten werden so lange gespeichert, wie es für die genannten Zwecke erforderlich ist.'],
+  ['11. Änderungen', 'bubbl kann diese Bedingungen jederzeit ändern. Durch die weitere Nutzung stimmst du den Änderungen zu.'],
+  ['12. Schlussbestimmungen', 'Sollte eine Bestimmung unwirksam sein, bleiben die übrigen wirksam.'],
+];
+
+function AgbSheet({ onClose }) {
+  return html`<div class="sheet-backdrop" onClick=${onClose}><div class="sheet agb" onClick=${(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Nutzungsbedingungen">
+    <div class="sheet-grip"></div>
+    <div class="agb-body"><h3>Nutzungsbedingungen & Datenschutz</h3><small class="muted">Stand: heute · 12 Abschnitte</small>
+      ${AGB.map(([t, txt]) => html`<section><b>${t}</b><p>${txt}</p></section>`)}
+      <button class="btn btn-primary w-100" onClick=${onClose}>Schließen</button></div>
+  </div></div>`;
+}
+
 function Join({ onJoin, error }) {
-  const [av, setAv] = useState(AVATARS[Math.floor(Math.random() * AVATARS.length)]);
-  return html`<main class="join stagger">
-    <${Logo} size=${46} />
-    <div class="glass pad bb-col">
-      <h2>Willkommen bei bubbl!</h2>
-      <p class="muted">Raum <b class="code">${code}</b>. Wähle ein Profilbild – deinen Namen brauchen wir nicht.</p>
-      <div class="avatar-grid">${AVATARS.map((a) => html`<button class=${`av-pick ${a === av ? 'on' : ''}`} onClick=${() => setAv(a)}>${a}</button>`)}</div>
-      <button class="btn btn-primary w-100" onClick=${() => onJoin(av)}>Profil erstellen →</button>
+  const [step, setStep] = useState(0);
+  const [email, setEmail] = useState('');
+  const [year, setYear] = useState('');
+  const [avatar, setAvatar] = useState(() => randomAvatar());
+  const [agb, setAgb] = useState(false);
+  const [newsletter, setNewsletter] = useState(true); // Dark Pattern: vorausgewählt
+  const [agbOpen, setAgbOpen] = useState(false);
+  const agbStat = useRef({ opened: false, ms: 0, since: 0 });
+  const local = email.trim().toLowerCase().replace(/@.*$/, '');
+  const validMail = /^[a-z0-9][a-z0-9._-]{1,19}$/.test(local);
+  const nowY = new Date().getFullYear();
+  const openAgb = () => { agbStat.current.opened = true; agbStat.current.since = performance.now(); setAgbOpen(true); };
+  const closeAgb = () => { agbStat.current.ms += performance.now() - agbStat.current.since; setAgbOpen(false); };
+  const submit = () => onJoin({ email: local, birthYear: year ? Number(year) : null, avatar, consent: { agb, newsletter, agbOpened: agbStat.current.opened, agbMs: Math.round(agbStat.current.ms) } });
+  useEffect(() => { if (error && /Adresse/.test(error)) setStep(0); }, [error]);
+  const steps = ['Konto', 'Profilbild', 'Zustimmung'];
+  return html`<main class="join">
+    <${Logo} size=${40} />
+    <div class="card join-card">
+      <ol class="join-steps">${steps.map((t, i) => html`<li class=${i < step ? 'done' : i === step ? 'now' : ''}><span>${i < step ? html`<i class="bi bi-check-lg"></i>` : i + 1}</span>${t}</li>`)}</ol>
+      ${step === 0 && html`<div class="bb-col join-pane">
+        <h2>Konto erstellen</h2>
+        <label class="ed-like"><span>E-Mail-Adresse</span>
+          <div class="input-group mail-group"><input class="form-control" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="z. B. luna.star" value=${email} onInput=${(e) => setEmail(e.target.value.replace(/\s/g, ''))} /><span class="input-group-text">@bubbl.mail</span></div>
+          <small class="muted"><i class="bi bi-incognito"></i> Denk dir eine Adresse aus – nicht deinen echten Namen und nicht deine echte E-Mail.</small></label>
+        <label class="ed-like"><span>Geburtsjahr <small class="muted">(freiwillig)</small></span>
+          <${SelectMenu} value=${year} placeholder="Keine Angabe" ariaLabel="Geburtsjahr" onChange=${setYear} options=${[{ value: '', label: 'Keine Angabe' }, ...Array.from({ length: 12 }, (_, i) => nowY - 9 - i).map((y) => ({ value: String(y), label: String(y) }))]} /></label>
+        <button class="btn btn-primary w-100" disabled=${!validMail} onClick=${() => setStep(1)}>Weiter <i class="bi bi-arrow-right"></i></button>
+      </div>`}
+      ${step === 1 && html`<div class="bb-col join-pane">
+        <h2>Dein Profilbild</h2>
+        <${AvatarBuilder} value=${avatar} onChange=${setAvatar} />
+        <div class="bb-row gap"><button class="btn" onClick=${() => setStep(0)}><i class="bi bi-arrow-left"></i></button><button class="btn btn-primary flex-grow-1" onClick=${() => setStep(2)}>Weiter <i class="bi bi-arrow-right"></i></button></div>
+      </div>`}
+      ${step === 2 && html`<div class="bb-col join-pane">
+        <h2>Fast geschafft!</h2>
+        <div class="join-summary"><${AvatarArt} cfg=${avatar} size=${56} /><div><b>${local}@bubbl.mail</b><small class="muted">Raum ${code}</small></div></div>
+        <label class="form-check join-check"><input class="form-check-input" type="checkbox" checked=${agb} onChange=${(e) => setAgb(e.target.checked)} />
+          <span>Ich akzeptiere die <button type="button" class="link-btn" onClick=${openAgb}>Nutzungsbedingungen</button> und die Datenschutzerklärung.</span></label>
+        <label class="form-check join-check"><input class="form-check-input" type="checkbox" checked=${newsletter} onChange=${(e) => setNewsletter(e.target.checked)} />
+          <span>Ja, ich möchte exklusive Angebote und Neuigkeiten von bubbl und Partnern per E-Mail erhalten.</span></label>
+        <div class="bb-row gap"><button class="btn" onClick=${() => setStep(1)}><i class="bi bi-arrow-left"></i></button><button class="btn btn-primary flex-grow-1" disabled=${!agb} onClick=${submit}>Konto erstellen <i class="bi bi-check-lg"></i></button></div>
+      </div>`}
       ${error && html`<p class="error">${error}</p>`}
     </div>
-    <small class="muted center">Mit dem Beitritt stimmst du zu, dass bubbl alles misst, was du tust. 😉</small>
+    <small class="muted center">bubbl ist ein Unterrichtsspiel. Es werden keine echten E-Mails verschickt.</small>
+    ${agbOpen && html`<${AgbSheet} onClose=${closeAgb} />`}
   </main>`;
 }
 
 function App() {
   const joinRef = useRef(null);
-  const { state: v, status, error, act, sock } = useRoom(() => (code ? { code, role: 'player', token: store.get(tokenKey), join: !!joinRef.current, avatar: joinRef.current } : null),
+  const { state: v, status, error, act, sock } = useRoom(() => (code ? { code, role: 'player', token: store.get(tokenKey), join: !!joinRef.current, reg: joinRef.current } : null),
     { onKicked: () => store.del(tokenKey) });
 
   useEffect(() => { if (v) { tracker.start(act); tracker.active = ['feed', 'blase', 'empfang'].includes(v.phase); } }, [v?.phase]);
 
   if (!code) { location.replace('/'); return null; }
   if (status === 'error') return html`<${Aurora} /><main class="join"><${Logo} size=${40} /><div class="glass pad bb-col center"><h2>Hoppla</h2><p>${error}</p><a class="btn" href="/">Zur Startseite</a></div></main>`;
-  if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(av) => { joinRef.current = av; sock.current?.greet(); }} />`;
+  if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(reg) => { joinRef.current = reg; sock.current?.greet(); }} />`;
   if (!v) return html`<${Aurora} /><main class="join"><${Logo} size=${46} /><div class="loader"><span class="dots"><i></i><i></i><i></i></span></div></main>`;
 
   const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: Werkbank, fairness: Fairness, quiz: Quiz }[v.phase] || Lobby;
@@ -455,6 +592,7 @@ function App() {
       <${Logo} size=${26} />
       <span class="spacer"></span>
       ${v.me.group && ['werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
+      <${MailButton} v=${v} act=${act} />
       <${PlayerMenu} v=${v} act=${act} />
     </header>
     <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} /></nav>

@@ -121,3 +121,4 @@ kbd { background: var(--field); color: var(--text); border: 1px solid var(--line
   .cp-online { display: none; }
 }
 .t-error { max-width: 480px; margin: 20vh auto; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.cp-who { display: flex; align-items: center; gap: 8px; } .cp-who small { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

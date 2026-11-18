@@ -1,5 +1,5 @@
 import {
-  html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
+  AvatarInSvg, html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
@@ -158,7 +158,7 @@ function TargetGraph({ v, targets }) {
       </g>`; })}
     ${ps.map((p) => { const [x, y] = pos[p.id]; const n = ADS.filter((a) => targets[a.id]?.includes(p.id)).length;
       return html`<g class="tnode" transform=${`translate(${x},${y})`}>
-        <circle r="22" /><text class="tnode-emoji" y="7">${p.avatar}</text>
+        <circle r="22" /><${AvatarInSvg} avatar=${p.avatar} r=${20} />
         <text class="tnode-id" x="30" y="6">#${p.id}${n > 0 ? html`<tspan class="tnode-n" dx="6">${n}×</tspan>` : ''}</text>
       </g>`; })}
   </svg>`;
@@ -243,6 +243,11 @@ function Profil({ v }) {
           <div class="im-bar"><i class="yes" style=${`flex:${t.infYes}`}>✓ ${t.infYes} stimmen</i><i class="no" style=${`flex:${t.infNo}`}>✗ ${t.infNo} falsch</i></div></div>`}
       </div>
     </div>
+    ${v.consent && v.consent.n > 0 && html`<div class="glass stage-card consent-strip">
+      <div class="cs-item"><i class="bi bi-file-earmark-text"></i><b>${v.consent.n - v.consent.agbOpened} von ${v.consent.n}</b><span>haben den AGB zugestimmt, ohne sie zu öffnen</span></div>
+      <div class="cs-item"><i class="bi bi-check2-square"></i><b>${v.consent.newsletter} von ${v.consent.n}</b><span>haben das vorausgewählte Newsletter-Häkchen gelassen</span></div>
+      <div class="cs-item"><i class="bi bi-envelope-paper-heart"></i><b>${v.consent.adMails}</b><span>personalisierte Werbe-Mails verschickt</span></div>
+    </div>`}
   </div>`;
 }
 
@@ -260,7 +265,7 @@ function BubbleMap({ v }) {
     <circle class="center-zone" cx=${cx} cy=${cy} r="90" /><text class="center-label" x=${cx} y=${cy + 115} text-anchor="middle">vielfältig</text>
     ${CATEGORIES.map((c) => { const [x, y] = hubs[c.id]; return html`<g class="hub" transform=${`translate(${x},${y})`} style=${`--c:${c.color}`}><circle r="62" /><text y="-4" class="hub-icon">${c.icon}</text><text y="24" class="hub-name">${c.name}</text></g>`; })}
     ${v.players.map((p, i) => { const [x, y] = place(p, i); const idx = p.bubbleIndex ?? 1;
-      return html`<g class="bnode" key=${p.id} style=${`transform:translate(${x}px,${y}px)`}><circle r="20" class=${idx < 0.4 ? 'deep' : ''} /><text y="7">${p.avatar}</text></g>`; })}
+      return html`<g class="bnode" key=${p.id} style=${`transform:translate(${x}px,${y}px)`}><circle r="20" class=${idx < 0.4 ? 'deep' : ''} /><${AvatarInSvg} avatar=${p.avatar} r=${18} /></g>`; })}
   </svg>`;
 }
 
@@ -322,7 +327,7 @@ function Reflexion({ v }) {
     </div>
     ${['pro', 'con'].map((kind) => html`<div class="glass stage-card notes-col">
       <div class="card-head"><h3>${kind === 'pro' ? '👍 Vorteile' : '👎 Nachteile & Gefahren'}</h3></div>
-      <div class="notes">${r.notes.filter((n) => n.kind === kind).map((n) => html`<div class=${`note ${kind}`} key=${n.key}><span>${n.text}</span><small>${n.avatar}</small></div>`)}</div>
+      <div class="notes">${r.notes.filter((n) => n.kind === kind).map((n) => html`<div class=${`note ${kind}`} key=${n.key}><span>${n.text}</span><small><${Avatar} avatar=${n.avatar} size=${26} /></small></div>`)}</div>
     </div>`)}
   </div>`;
 }

@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks'
 import htm from 'htm';
 import { io } from '/socket.io/socket.io.esm.min.js';
 import { CATEGORIES, CAT, POST, AD, PAGES, PHASE, GROUP_LETTERS, GROUP_COLORS, applyContent } from '/shared/content.js';
+import { avatarShapes, randomAvatar, AVATAR_PARTS, normalizeAvatar } from '/shared/avatar.js';
+export { randomAvatar, normalizeAvatar };
 
 export const html = htm.bind(h);
 export { h, render, useState, useEffect, useRef, useMemo, useCallback };
@@ -34,6 +36,7 @@ export function useRoom(hello, { onKicked } = {}) {
         if (res?.auth) { setError(res.error); setStatus('auth'); return; }
         if (res?.error) { setError(res.error); setStatus('error'); return; }
         if (res?.needJoin) { setStatus('needJoin'); return; }
+        if (res?.joinError) { setError(res.joinError); setStatus('needJoin'); return; }
         if (res?.token) store.set(`bubbl:token:${msg.code}`, res.token);
         setError(null); setStatus('ok');
       });
@@ -108,11 +111,45 @@ export const Aurora = () => html`
 
 export const groupColor = (gid) => GROUP_COLORS[Math.max(0, GROUP_LETTERS.indexOf(gid))];
 
+// Avatar als SVG (Baukasten) – ältere Räume mit Emoji-Avataren werden weiter unterstützt
+export function AvatarArt({ cfg, size = 40, x, y }) {
+  const shapes = avatarShapes(cfg);
+  return h('svg', { viewBox: '0 0 100 100', width: size, height: size, x, y, class: 'avatar-svg', 'aria-hidden': 'true' },
+    h('defs', null, h('clipPath', { id: 'avc' }, h('circle', { cx: 50, cy: 50, r: 50 }))),
+    h('g', { 'clip-path': 'url(#avc)' }, shapes.map(([tag, attrs], i) => h(tag, { ...attrs, key: i }))));
+}
 export const Avatar = ({ id, avatar, size = 40, online, ring, title }) => html`
-  <span class=${`avatar ${online === false ? 'off' : ''}`} style=${`--s:${size}px;${ring ? `--ring:${ring}` : ''}`} title=${title || (id != null ? `ID ${id}` : '')}>
-    <span class="avatar-emoji">${avatar || '🙂'}</span>
+  <span class=${`avatar ${online === false ? 'off' : ''} ${avatar && typeof avatar === 'object' ? 'has-art' : ''}`} style=${`--s:${size}px;${ring ? `--ring:${ring}` : ''}`} title=${title || (id != null ? `ID ${id}` : '')}>
+    ${avatar && typeof avatar === 'object' ? html`<${AvatarArt} cfg=${avatar} size=${size} />` : html`<span class="avatar-emoji">${avatar || '🙂'}</span>`}
     ${id != null && html`<b class="avatar-id">${id}</b>`}
   </span>`;
+
+// Avatar in SVG-Grafiken (Beamer): als verschachteltes SVG oder Emoji-Text
+export const AvatarInSvg = ({ avatar, r = 20 }) => (avatar && typeof avatar === 'object'
+  ? html`<${AvatarArt} cfg=${avatar} size=${r * 2} x=${-r} y=${-r} />`
+  : html`<text class="svg-emoji" y=${r * 0.35} text-anchor="middle" font-size=${r * 1.1}>${avatar}</text>`);
+
+// ------------------------------------------------------------------ Avatar-Baukasten
+const BUILDER_TABS = [
+  ['skin', 'Haut', 'palette'], ['hair', 'Frisur', 'scissors'], ['hairColor', 'Haarfarbe', 'droplet'], ['eyes', 'Augen', 'eye'],
+  ['mouth', 'Mund', 'emoji-smile'], ['extra', 'Extras', 'eyeglasses'], ['shirt', 'Shirt', 'person'], ['bg', 'Hintergrund', 'circle-half'],
+];
+export function AvatarBuilder({ value, onChange }) {
+  const [tab, setTab] = useState('hair');
+  const cur = value || randomAvatar();
+  const isColor = typeof AVATAR_PARTS[tab][0] === 'string' && AVATAR_PARTS[tab][0].startsWith('#');
+  return html`<div class="av-builder">
+    <div class="av-stage"><${AvatarArt} cfg=${cur} size=${132} />
+      <button type="button" class="btn btn-sm av-dice" onClick=${() => onChange(randomAvatar())}><i class="bi bi-dice-5"></i> Zufall</button></div>
+    <div class="av-tabs" role="tablist">${BUILDER_TABS.map(([k, label, icon]) => html`<button type="button" role="tab" aria-selected=${tab === k} class=${`av-tab ${tab === k ? 'on' : ''}`} onClick=${() => setTab(k)}><i class=${`bi bi-${icon}`}></i><span>${label}</span></button>`)}</div>
+    <div class=${`av-options ${isColor ? 'colors' : ''}`}>${AVATAR_PARTS[tab].map((opt, i) => {
+      const on = cur[tab] === i;
+      return isColor
+        ? html`<button type="button" class=${`av-swatch ${on ? 'on' : ''}`} style=${`--sw:${opt}`} aria-label=${`Farbe ${i + 1}`} aria-pressed=${on} onClick=${() => onChange({ ...cur, [tab]: i })}></button>`
+        : html`<button type="button" class=${`av-opt ${on ? 'on' : ''}`} aria-pressed=${on} onClick=${() => onChange({ ...cur, [tab]: i })}><${AvatarArt} cfg=${{ ...cur, [tab]: i }} size=${52} /><small>${opt}</small></button>`;
+    })}</div>
+  </div>`;
+}
 
 export const CatChip = ({ cat, on, onClick, small, count }) => {
   const c = CAT[cat];

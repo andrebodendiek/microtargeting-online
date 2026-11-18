@@ -314,3 +314,22 @@ button.chip:active { transform: scale(0.96); }
 .credit { display: block; font-size: 11.5px; color: var(--faint); margin-top: 4px; line-height: 1.3; }
 .credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(0,0,0,.2); }
 .ad-visual.photo .ad-copy span { display: none; }
+
+/* ---------------------------------------------------------------- Avatar (SVG) + Baukasten */
+.avatar.has-art { background: none; overflow: visible; }
+.avatar.has-art .avatar-svg { border-radius: 50%; display: block; }
+.av-builder { display: flex; flex-direction: column; gap: 12px; }
+.av-stage { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.av-stage .avatar-svg { border-radius: 50%; box-shadow: 0 6px 20px rgba(45,49,51,.15); }
+.av-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.av-tabs::-webkit-scrollbar { display: none; }
+.av-tab { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 600; display: inline-flex; gap: 5px; align-items: center; color: var(--muted); }
+.av-tab.on { background: var(--gn-primary); border-color: var(--gn-primary); color: #fff; }
+.av-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
+.av-options.colors { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
+.av-opt { border: 2px solid transparent; background: var(--field); border-radius: 12px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: border-color .15s, transform .15s; }
+.av-opt small { font-size: 11px; color: var(--muted); }
+.av-opt.on { border-color: var(--gn-primary); background: #fff; }
+.av-opt:hover { transform: translateY(-1px); }
+.av-swatch { aspect-ratio: 1; border-radius: 50%; border: 3px solid #fff; background: var(--sw); box-shadow: 0 0 0 1px var(--line); }
+.av-swatch.on { box-shadow: 0 0 0 3px var(--gn-primary); }

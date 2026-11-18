@@ -1,7 +1,9 @@
 // Simuliert eine Klasse (Bots), z. B. zum Testen oder für eine Vorführung.
 // Aufruf: node scripts/simulate.js <URL> <RAUMCODE> [Anzahl=16]
 import { io } from 'socket.io-client';
-import { CATEGORIES, ROUND1, ADS, AVATARS, POST } from '../public/shared/content.js';
+import { CATEGORIES, ROUND1, ADS, POST } from '../public/shared/content.js';
+import { randomAvatar } from '../public/shared/avatar.js';
+const NAMES = ['luna', 'max', 'kiwi', 'nova', 'sky', 'pixel', 'mila', 'leo', 'zoe', 'ben', 'ella', 'finn', 'mia', 'noah', 'lia', 'tom', 'ida', 'paul', 'emma', 'jan'];
 
 const [url = 'http://localhost:3000', code, nArg = '16'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 if (!code) { console.log('Aufruf: node scripts/simulate.js <URL> <RAUMCODE> [Anzahl]'); process.exit(1); }
@@ -14,11 +16,11 @@ class Bot {
   constructor(i) {
     this.fav = [pick(cats), pick(cats)];
     this.secret = pick(cats);
-    this.avatar = AVATARS[i % AVATARS.length];
+    this.reg = { email: `${NAMES[i % NAMES.length]}.${Math.random().toString(36).slice(2, 6)}`, birthYear: 2010 + (i % 4), avatar: randomAvatar(), consent: { agb: true, newsletter: Math.random() < 0.8, agbOpened: Math.random() < 0.15, agbMs: Math.round(Math.random() * 8000) } };
     this.state = null;
     this.s = io(url, { transports: ['websocket'] });
     this.s.on('state', (st) => { this.state = st; this.react(); });
-    this.ready = new Promise((res) => this.s.on('connect', () => this.s.emit('hello', { code, role: 'player', join: true, avatar: this.avatar, token: this.token }, (r) => { this.token = r.token; this.id = r.id; res(); })));
+    this.ready = new Promise((res) => this.s.on('connect', () => this.s.emit('hello', { code, role: 'player', join: true, reg: this.reg, token: this.token }, (r) => { this.token = r.token; this.id = r.id; res(); })));
     this.done = {};
   }
   act(type, data) { this.s.emit('act', { type, data }); }

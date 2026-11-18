@@ -312,3 +312,9 @@ body { overflow: hidden; }
 .questions-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; animation: rise 0.5s both; }
 .q-card { padding: 1rem 1.2rem; display: flex; gap: 0.8rem; align-items: center; font-size: 1.25rem; }
 .q-card span { font-size: 2rem; }
+.consent-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding-top: 12px !important; padding-bottom: 12px !important; flex: none; }
+.cs-item { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; }
+.cs-item .bi { grid-row: span 2; font-size: calc(30px * var(--bscale, 1)); color: var(--gn-primary); }
+.cs-item b { font-size: calc(24px * var(--bscale, 1)); line-height: 1.1; }
+.cs-item span { color: var(--muted); line-height: 1.25; font-size: calc(14px * var(--bscale, 1)); }
+.tnode .avatar-svg, .bnode .avatar-svg { overflow: visible; }

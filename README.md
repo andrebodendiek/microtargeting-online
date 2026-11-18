@@ -8,7 +8,7 @@ Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna R
 
 | # | Schritt | Form | Beamer zeigt |
 |---|---------|------|--------------|
-| 1 | **Anmelden** – QR-Code scannen, Avatar wählen, Nutzer-ID merken | EA | QR-Code, Raumcode, Avatar-Wand |
+| 1 | **Anmelden** – QR-Code scannen, Konto mit ausgedachter Adresse @bubbl.mail anlegen (AGB mit versteckten Klauseln, vorausgewähltes Newsletter-Häkchen), Profilbild im Avatar-Baukasten bauen | EA | QR-Code, Raumcode, Avatar-Wand |
 | 2 | **Likes verteilen** – Feed mit den Original-Beiträgen, max. 10 Likes | EA | Like-Fortschritt je ID, Trending-Beiträge |
 | 3 | **Daten auswerten** – jede Gruppe zählt die Likes ihrer Kategorie aus | GA | Live-Heatmap „Interessen-Datenbank“, Fehler markiert |
 | 4 | **Werbung platzieren** – Kategorien zuordnen, Zielgruppe mit Budget wählen | GA | Graph: welche Anzeige erreicht wen |
@@ -43,7 +43,7 @@ Unter **/editor** (Lehrkraft-Anmeldung nötig) lassen sich alle Inhalte bearbeit
 
 **Zugriffsschutz:** Raum erstellen, Lehrkraft-Cockpit, Beamer-Ansicht und CSV-Export erfordern die Anmeldung mit dem Lehrkraft-Passwort (`TEACHER_PASSWORD`). Die Anmeldung gilt 30 Tage pro Browser (signiertes HttpOnly-Cookie) und wird bei einer Passwortänderung für alle ungültig. Zusätzlich braucht jeder Raum seinen geheimen Schlüssel aus dem Cockpit-Link. Fehlversuche werden gebremst. SchülerInnen treten weiterhin ohne Anmeldung nur mit dem Raumcode bei.
 
-Datenschutz: keine Namen, keine Accounts. SuS sind nur über Nummer und Tier-Avatar erkennbar. Räume werden 30 Tage nach der letzten Änderung gelöscht.
+Datenschutz: keine echten Namen und keine echten E-Mail-Adressen. SuS melden sich mit einer ausgedachten Adresse `name@bubbl.mail` an (es werden keine Mails verschickt), bauen ein Profilbild im Avatar-Baukasten und sind sonst nur über ihre Nummer erkennbar. Räume werden 30 Tage nach der letzten Änderung gelöscht.
 
 ## Fotos
 - Alle Beiträge und Anzeigen haben echte Fotos aus freien Quellen über **Openverse** (nur CC0, Public Domain oder CC BY), von Hand auf Schuleignung geprüft (keine Prominenten, Marken im Vordergrund oder freizügigen Motive).
@@ -78,3 +78,6 @@ Weitere Umgebungsvariablen (optional): `SESSION_SECRET` (zusätzlicher Geheimwer
 Lokal: `TEACHER_PASSWORD=test npm start`.
 
 Hinweis: Eine Instanz reicht für viele Klassen gleichzeitig. Nicht auf mehrere Instanzen skalieren (Spielstand liegt im Prozess).
+
+## bubbl-Postfach
+Jede Person hat ein simuliertes Postfach (Briefumschlag oben rechts). Je nach Spielphase kommen personalisierte Mails: Willkommen, „Das wird dir gefallen“ (aus den Likes), Rabatt-Mails zu den erhaltenen Anzeigen (nur mit Newsletter-Häkchen), Wochenrückblick aus den Tracking-Daten, Wahlwerbung und „Wir vermissen dich“. Jede Mail erklärt, *warum* sie ankommt; abbestellen ist möglich. Im Schritt „Dein Datenprofil“ wird aufgelöst, ob die AGB gelesen und das Häkchen bemerkt wurde (Beamer: Klassenstatistik, Stichwort Dark Pattern / EuGH Planet49).

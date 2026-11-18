@@ -2,8 +2,9 @@
 import crypto from 'node:crypto';
 import {
   CATEGORIES, CAT, POSTS, POST, ROUND1, ADS, AD, PHASES, AVATARS, GROUP_LETTERS,
-  PARTY_MESSAGES, INFERENCES, QUIZ, FAIRNESS, applyContent, DEFAULT_CONTENT,
+  PARTY, PARTY_MESSAGES, INFERENCES, QUIZ, FAIRNESS, applyContent, DEFAULT_CONTENT,
 } from '../public/shared/content.js';
+import { normalizeAvatar, randomAvatar } from '../public/shared/avatar.js';
 
 export const OPTIONAL_PHASES = PHASES.filter((p) => p.optional).map((p) => p.id);
 
@@ -72,12 +73,33 @@ export function budgetOf(room) {
   return room.settings.budget > 0 ? room.settings.budget : Math.max(1, Math.ceil(n / 2));
 }
 
-function newPlayer(room, avatar) {
+// ---------------------------------------------------------------- Registrierung (simuliert)
+// Nur der Namensteil der Adresse wird angenommen – @bubbl.mail ist fest, echte Adressen sind so nicht eingebbar.
+export const MAIL_DOMAIN = 'bubbl.mail';
+const LOCAL_RE = /^[a-z0-9][a-z0-9._-]{1,19}$/;
+export class JoinError extends Error {}
+export function checkRegistration(room, reg = {}) {
+  const local = String(reg.email || '').trim().toLowerCase().replace(/@.*$/, '');
+  if (!LOCAL_RE.test(local)) throw new JoinError('Bitte eine Adresse mit 2–20 Zeichen (a–z, 0–9, Punkt, Minus) ausdenken.');
+  if (playersOf(room).some((q) => q.email === `${local}@${MAIL_DOMAIN}`)) throw new JoinError('Diese Adresse ist schon vergeben – bitte eine andere ausdenken.');
+  const year = Number(reg.birthYear);
+  const nowY = new Date().getFullYear();
+  const birthYear = Number.isInteger(year) && year >= nowY - 25 && year <= nowY - 8 ? year : null;
+  const c = reg.consent && typeof reg.consent === 'object' ? reg.consent : {};
+  if (c.agb !== true) throw new JoinError('Ohne Zustimmung zu den AGB geht es nicht weiter.');
+  return {
+    email: `${local}@${MAIL_DOMAIN}`, name: local.split(/[._-]/)[0] || local, birthYear,
+    avatar: normalizeAvatar(reg.avatar) || randomAvatar(),
+    consent: { agb: true, newsletter: c.newsletter !== false, agbOpened: c.agbOpened === true, agbMs: clamp(Math.round(Number(c.agbMs) || 0), 0, 3_600_000) },
+  };
+}
+
+function newPlayer(room, reg) {
   const id = room.nextId++;
-  const used = new Set(playersOf(room).map((p) => p.avatar));
-  const av = AVATARS.includes(avatar) ? avatar : (AVATARS.find((a) => !used.has(a)) || AVATARS[id % AVATARS.length]);
+  const r = reg && reg.email ? reg : { email: null, name: `nutzer${id}`, birthYear: null, avatar: normalizeAvatar(reg?.avatar) || randomAvatar(), consent: { agb: true, newsletter: true, agbOpened: false, agbMs: 0 } };
   const p = {
-    id, token: rid(18), avatar: av, joinedAt: Date.now(), group: null,
+    id, token: rid(18), avatar: r.avatar, email: r.email, name: r.name, birthYear: r.birthYear, consent: r.consent, mailRead: {},
+    joinedAt: Date.now(), group: null,
     likes: [], feedDone: false,
     track: { dwell: {}, opens: {}, read: {}, events: 0, scrollPx: 0, sessionMs: 0 },
     ratings: {}, inferFb: {},
@@ -336,11 +358,55 @@ function extendBubbleFeed(room, p, n, explore = false) {
   }
 }
 
+// ---------------------------------------------------------------- bubbl-Postfach (simulierte E-Mails)
+// Mails ergeben sich aus dem Spielstand: Phase erreicht + Profil + Einwilligung. Nichts wird wirklich verschickt.
+const DISCOUNTS = ['BUBBL20', 'NURHEUTE15', 'FUERDICH10', 'TOPDEAL25'];
+export function mailsFor(room, p) {
+  const at = room.phaseAt || {};
+  const name = p.name || `nutzer${p.id}`;
+  const prof = profileOf(p);
+  const top = topCat(prof.full); const topH = topCat(prof.hidden);
+  const out = [];
+  const add = (m) => out.push({ ...m, read: !!p.mailRead?.[m.id] });
+  // Newsletter-Zustand zu einem Zeitpunkt (spätere Abmeldung löscht bereits empfangene Mails nicht)
+  const sub = (t) => p.consent?.newsletter !== false || (p.consent?.unsubAt && p.consent.unsubAt > t);
+  add({ id: 'welcome', at: p.joinedAt, kind: 'welcome', from: 'bubbl Team', fromIcon: 'bubbl', subject: `Willkommen bei bubbl, ${name}! 🎉`, preview: 'Bestätige jetzt deine E-Mail-Adresse und entdecke Beiträge, die zu dir passen.' });
+  if (at.auswertung && top && sub(at.auswertung)) {
+    const recs = POSTS.filter((x) => x.cat === top && !p.likes.includes(x.id)).slice(0, 2).map((x) => x.id);
+    add({ id: 'recs', at: at.auswertung, kind: 'recs', from: 'bubbl', fromIcon: 'bubbl', subject: `${name}, das hier wird dir gefallen 👀`, preview: `Neue Beiträge zu ${CAT[top].name} – ausgewählt nur für dich.`, data: { cat: top, posts: recs } });
+  }
+  if (at.empfang) {
+    if (sub(at.empfang)) {
+      const rec = receivedAds(room, p, humanTargets(room), algoTargets(room));
+      rec.forEach((adId, i) => {
+        const ad = AD[adId]; if (!ad) return;
+        const code = DISCOUNTS[(p.id + i) % DISCOUNTS.length];
+        add({ id: `ad-${adId}`, at: at.empfang + (i + 1) * 1000, kind: 'ad', from: ad.brand, fromIcon: 'ad', subject: `${name}, ${code.match(/\d+/)} % Rabatt nur für dich – nur heute! ⏰`, preview: `${ad.product}: ${ad.slogan}`, data: { ad: adId, code, cats: ad.cats.filter((c) => prof.full[c] > 0) } });
+      });
+    } else {
+      add({ id: 'nooffers', at: at.empfang, kind: 'nooffers', from: 'bubbl', fromIcon: 'bubbl', subject: `Schade, ${name} 🥺 Bist du dir sicher?`, preview: 'Du verpasst exklusive Angebote. Mit einem Klick bist du wieder dabei …' });
+    }
+  }
+  if (at.profil && topH && sub(at.profil)) {
+    const ms = POSTS.filter((x) => x.cat === topH).reduce((a, x) => a + (p.track.dwell[x.id] || 0) + (p.track.read[x.id] || 0), 0);
+    add({ id: 'weekly', at: at.profil, kind: 'weekly', from: 'bubbl', fromIcon: 'bubbl', subject: 'Dein bubbl-Wochenrückblick 📊', preview: `Du hast ${Math.max(1, Math.round(ms / 1000))} Sekunden mit ${CAT[topH].name} verbracht. Wir haben da etwas für dich …`, data: { cat: topH, ms, likes: p.likes.length } });
+  }
+  if (at.wahl) {
+    const cat = p.vote?.cat || top || 'mode';
+    add({ id: 'party', at: at.wahl, kind: 'party', from: PARTY.name || 'Partei für Morgen', fromIcon: 'party', subject: `${name}, ${PARTY_MESSAGES[cat]?.title || 'deine Stimme zählt!'}`, preview: PARTY_MESSAGES[cat]?.text || '', data: { cat } });
+  }
+  if (at.reflexion && sub(at.reflexion)) add({ id: 'miss', at: at.reflexion, kind: 'miss', from: 'bubbl', fromIcon: 'bubbl', subject: `Wir vermissen dich, ${name}! 🥺 Hier sind 10 % für dich`, preview: 'Komm zurück – deine Freunde haben 12 neue Beiträge geliked.' });
+  return out.sort((a, b) => b.at - a.at);
+}
+const isAdMail = (m) => m.kind === 'ad' || m.kind === 'miss' || m.kind === 'recs' || m.kind === 'weekly';
+
 // ---------------------------------------------------------------- Aktionen
 export const actions = {
   // --- SchülerInnen
-  join(room, _p, { avatar }) { return newPlayer(room, avatar); },
-  avatar(room, p, { avatar }) { if (AVATARS.includes(avatar)) p.avatar = avatar; },
+  join(room, _p, reg) { return newPlayer(room, reg?.email ? checkRegistration(room, reg) : reg); },
+  avatar(room, p, { avatar }) { const a = normalizeAvatar(avatar); if (a) p.avatar = a; },
+  readMail(room, p, { id }) { if (typeof id === 'string' && id.length <= 40 && mailsFor(room, p).some((m) => m.id === id)) (p.mailRead ||= {})[id] = true; },
+  unsubscribe(room, p) { if (p.consent) { p.consent.newsletter = false; p.consent.unsubAt = Date.now(); } },
   like(room, p, { postId }) {
     if (!POST[postId]) return;
     if (room.phase === 'feed') {
@@ -450,6 +516,7 @@ export const actions = {
     const list = activePhases(room);
     if (!list.find((x) => x.id === phase)) return;
     room.phase = phase;
+    (room.phaseAt ||= {})[phase] ??= Date.now();
     const idx = list.findIndex((x) => x.id === phase);
     if (idx >= list.findIndex((x) => x.id === 'auswertung') && !room.groups) formGroups(room);
     if (phase === 'blase') for (const p of playersOf(room)) if (!p.bubble.feed.length) extendBubbleFeed(room, p, 6);
@@ -546,7 +613,7 @@ export function staffView(room, { forBeamer = false } = {}) {
   const players = ps.map((p) => {
     const prof = profs[p.id];
     const base = {
-      id: p.id, avatar: p.avatar, group: p.group, online: !!p.online,
+      id: p.id, avatar: p.avatar, group: p.group, online: !!p.online, email: forBeamer ? undefined : p.email,
       likes: p.likes.length, feedDone: p.feedDone,
       rated: Object.keys(p.ratings).length,
       inferDone: Object.keys(p.inferFb).length,
@@ -614,6 +681,10 @@ export function staffView(room, { forBeamer = false } = {}) {
     }
     let infYes = 0, infNo = 0;
     for (const p of ps) for (const val of Object.values(p.inferFb)) val ? infYes++ : infNo++;
+    // Postfach & Einwilligungen (Dark Patterns aufdecken)
+    let adMails = 0, newsletter = 0, agbOpened = 0;
+    for (const p of ps) { adMails += mailsFor(room, p).filter(isAdMail).length; if (p.consent?.newsletter !== false) newsletter++; if (p.consent?.agbOpened) agbOpened++; }
+    v.consent = { adMails, newsletter, agbOpened, n: ps.length };
     v.tracking = { totals, catLikes, catHidden, postAttention, infYes, infNo,
       differ: players.filter((x) => x.topLikes && x.topHidden && x.topLikes !== x.topHidden).length };
   }
@@ -677,9 +748,11 @@ export function playerView(room, p) {
   const g = groupOf(room, p);
   const v = {
     code: room.code, phase, phases: list.map((x) => x.id), settings: room.settings,
-    me: { id: p.id, avatar: p.avatar, group: p.group, likes: p.likes, feedDone: p.feedDone },
+    me: { id: p.id, avatar: p.avatar, group: p.group, likes: p.likes, feedDone: p.feedDone, email: p.email, name: p.name, newsletter: p.consent?.newsletter !== false },
   };
   if (phase === 'feed' || phase === 'lobby') v.feed = feedOrder(p.id);
+  const mails = mailsFor(room, p);
+  v.mail = { list: mails, unread: mails.filter((m) => !m.read).length };
   if (g && phase === 'werbung') {
     const members = playersOf(room).filter((q) => q.group === g.id).map((q) => ({ id: q.id, avatar: q.avatar, online: !!q.online }));
     v.group = { id: g.id, cats: g.cats, ads: g.ads, members };
@@ -703,6 +776,7 @@ export function playerView(room, p) {
   }
   if (phase === 'profil') {
     const prof = profileOf(p);
+    v.consentReveal = { newsletter: p.consent?.newsletter !== false, unsub: !!p.consent?.unsubAt, agbOpened: !!p.consent?.agbOpened, agbMs: p.consent?.agbMs || 0, adMails: mails.filter(isAdMail).length, email: p.email };
     v.profile = {
       likesN: prof.likesN, fullN: prof.fullN, likes: prof.likes,
       stats: trackingStats(p), inferences: inferencesOf(p, prof), fb: p.inferFb,
@@ -758,7 +832,8 @@ export function auskunft(room, p) {
     titel: 'Auskunft nach Art. 15 DSGVO – bubbl (Unterrichtssimulation)',
     erstellt_am: new Date().toISOString(),
     verantwortlicher: 'bubbl – Microtargeting-Labor (Raum ' + room.code + ')',
-    betroffene_person: { nutzer_id: p.id, avatar: p.avatar, beigetreten: new Date(p.joinedAt).toISOString() },
+    betroffene_person: { nutzer_id: p.id, email: p.email, geburtsjahr: p.birthYear ?? null, beigetreten: new Date(p.joinedAt).toISOString(),
+      einwilligungen: { agb: !!p.consent?.agb, newsletter: p.consent?.newsletter !== false, agb_geoeffnet: !!p.consent?.agbOpened, agb_lesezeit_s: Math.round((p.consent?.agbMs || 0) / 1000) } },
     verarbeitungszwecke: ['Personalisierte Werbung (Microtargeting)', 'Empfehlung von Beiträgen (Feed)', 'Politische Werbung'],
     kategorien_von_daten: ['Interaktionen (Likes)', 'Nutzungsverhalten (Verweildauer, geöffnete Artikel, Lesezeit, Scrollen)', 'Abgeleitete Interessen und Vermutungen (Profiling)', 'Bewertungen und Abstimmungen'],
     empfaenger: ['Werbekunden (Gruppen ' + (room.groups || []).map((g) => g.id).join(', ') + ')', 'bubbl-Werbealgorithmus', 'Partei für Morgen (politische Werbung)'],
@@ -774,7 +849,7 @@ export function auskunft(room, p) {
       likes: p.likes.map((id) => POST[id]?.headline || id),
       verweildauer_ms_je_beitrag: p.track.dwell, lesezeit_ms_je_beitrag: p.track.read, geoeffnete_artikel: p.track.opens,
       interaktionen_gesamt: ts.events, gescrollt_px: p.track.scrollPx, datenpunkte_gesamt: ts.dataPoints,
-      werbebewertungen: p.ratings, filterblase_likes: p.bubble.likes, wahl_sympathie: p.vote?.score ?? null,
+      werbebewertungen: p.ratings, empfangene_mails: mailsFor(room, p).map((m) => ({ von: m.from, betreff: m.subject, gelesen: m.read })), filterblase_likes: p.bubble.likes, wahl_sympathie: p.vote?.score ?? null,
       fairness_antworten: p.fair || {}, reflexion: p.reflect,
       protokoll_letzte_anfragen: (p.trackLog || []).slice(-20),
     },
@@ -785,11 +860,11 @@ export function auskunft(room, p) {
 // CSV-Export (Datenbank nach Original-Tabelle 02_Auswertung)
 export function exportCsv(room) {
   const ps = playersOf(room);
-  const head = ['ID', 'Avatar', 'Gruppe', ...CATEGORIES.map((c) => `Likes ${c.name}`), ...CATEGORIES.map((c) => `Profil ${c.name} (mit Tracking)`), 'Verweildauer s', 'Datenpunkte', ...ADS.map((a) => `Bewertung ${a.label}`), 'Wahl-Sympathie', 'Meinung (1-5)', 'Pro', 'Contra', 'Fairness: interessiert', 'Fairness: fair?', 'Quiz-Punkte'];
+  const head = ['ID', 'E-Mail (fiktiv)', 'Gruppe', ...CATEGORIES.map((c) => `Likes ${c.name}`), ...CATEGORIES.map((c) => `Profil ${c.name} (mit Tracking)`), 'Verweildauer s', 'Datenpunkte', ...ADS.map((a) => `Bewertung ${a.label}`), 'Wahl-Sympathie', 'Meinung (1-5)', 'Pro', 'Contra', 'Fairness: interessiert', 'Fairness: fair?', 'Quiz-Punkte'];
   const qs = quizScores(room);
   const rows = ps.map((p) => {
     const prof = profileOf(p); const ts = trackingStats(p);
-    return [p.id, p.avatar, p.group || '', ...CAT_IDS.map((c) => prof.likes[c]), ...CAT_IDS.map((c) => prof.fullN[c].toFixed(2)),
+    return [p.id, p.email || '', p.group || '', ...CAT_IDS.map((c) => prof.likes[c]), ...CAT_IDS.map((c) => prof.fullN[c].toFixed(2)),
       Math.round((ts.dwellMs + ts.readMs) / 1000), ts.dataPoints, ...ADS.map((a) => p.ratings[a.id] ?? ''), p.vote?.score ?? '',
       p.reflect.opinion ?? '', p.reflect.pro, p.reflect.con, p.fair?.interest ?? '', p.fair?.fair ?? '', qs[p.id] ?? ''];
   });

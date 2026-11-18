@@ -139,13 +139,13 @@ function Players({ v, act }) {
     <div class="table-responsive"><table class="table table-hover align-middle cp-table">
       <thead><tr><th>ID</th>${groups.length > 0 && html`<th>Gruppe</th>`}<th>Status</th><th title="Hauptinteresse laut Likes → laut Tracking">Interesse</th><th class="text-end" title="gesammelte Datenpunkte">Daten</th><th></th></tr></thead>
       <tbody>${v.players.map((p) => html`<tr key=${p.id}>
-        <td><${Avatar} id=${p.id} avatar=${p.avatar} size=${32} online=${p.online} /></td>
+        <td><div class="cp-who"><${Avatar} id=${p.id} avatar=${p.avatar} size=${32} online=${p.online} />${p.email && html`<small class="muted" title=${p.email}>${p.email.replace(/@.*/, '')}</small>`}</div></td>
         ${groups.length > 0 && html`<td class="cp-group"><${SelectMenu} size="sm" value=${p.group || ''} ariaLabel=${`Gruppe von ID ${p.id}`} onChange=${(g) => act('setGroup', { id: p.id, group: g })} options=${groups.map((g) => ({ value: g.id, label: g.id, hint: g.cats.map((c) => CAT[c].name).join(', ') }))} /></td>`}
         <td class="small">${stat(p)}</td>
         <td class="small">${p.topLikes ? CAT[p.topLikes].icon : '·'} → ${p.topFull ? CAT[p.topFull].icon : '·'} ${p.topHidden && p.topHidden !== p.topLikes ? html`<span class="status-pill warn" title="Tracking zeigt anderes Interesse">🕵️ ${CAT[p.topHidden].icon}</span>` : ''}</td>
         <td class="small num text-end">${p.dataPoints ?? '–'}</td>
         <td class="text-end"><${Dropdown} btnClass="icon-btn" icon="three-dots-vertical" caret=${false} title=${`Aktionen für ID ${p.id}`} items=${[
-          { header: `ID ${p.id} ${p.avatar} · ${p.online ? 'online' : 'offline'}` },
+          { header: `ID ${p.id}${p.email ? ` · ${p.email}` : ''} · ${p.online ? 'online' : 'offline'}` },
           ...(groups.length ? [{ header: 'In Gruppe verschieben' }, ...groups.map((g) => ({ label: `Gruppe ${g.id}`, icon: 'arrow-right-circle', hint: g.cats.map((c) => CAT[c].name).join(', '), active: p.group === g.id, onClick: () => act('setGroup', { id: p.id, group: g.id }) })), { divider: true }] : []),
           { label: 'Aus dem Raum entfernen', icon: 'person-x', danger: true, onClick: () => confirm(`ID ${p.id} entfernen?`) && act('kick', { id: p.id }) },
         ]} /></td>

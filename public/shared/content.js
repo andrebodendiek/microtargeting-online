@@ -315,7 +315,7 @@ applyContent(DEFAULT_CONTENT);
 // Phasen des Spiels. optional = kann von der Lehrkraft abgeschaltet werden.
 export const PHASES = [
   { id: 'lobby', title: 'Anmelden', icon: '👋', optional: false, mode: 'EA',
-    task: ['Scanne den QR-Code oder gib den Raumcode ein.', 'Wähle einen Avatar – deinen echten Namen brauchst du nicht.', 'Merke dir deine Nutzer-ID!'] },
+    task: ['Scanne den QR-Code oder gib den Raumcode ein.', 'Erstelle ein Konto mit einer ausgedachten E-Mail-Adresse und baue dein Profilbild.', 'Merke dir deine Nutzer-ID!'] },
   { id: 'feed', title: 'Likes verteilen', icon: '❤️', optional: false, mode: 'EA',
     task: ['Scrolle durch deinen bubbl-Feed.', 'Like die Beiträge, die dich wirklich interessieren.', 'Du hast höchstens {maxLikes} Likes.'] },
   { id: 'auswertung', title: 'Datenbank entsteht', icon: '📊', optional: false, mode: 'Plenum',

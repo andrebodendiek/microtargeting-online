@@ -345,7 +345,10 @@ io.on('connection', (sock) => {
         if (!msg.join) return reply({ needJoin: true });
         if (sock.data?.joined || !hit(`join:${ip}`, 80, 10 * 60_000)) return reply({ error: 'Zu viele neue Profile von diesem Gerät/Netz. Bitte kurz warten.' });
         if (Object.values(room.players).filter((x) => !x.kicked).length >= 60) return reply({ error: 'Der Raum ist voll.' });
-        p = G.actions.join(room, null, { avatar: msg.avatar });
+        try { p = G.actions.join(room, null, msg.reg && typeof msg.reg === 'object' ? msg.reg : { avatar: msg.avatar }); } catch (e) {
+          if (e instanceof G.JoinError) return reply({ joinError: e.message });
+          throw e;
+        }
       }
       sock.data = { code: room.code, role: 'player', pid: p.id, joined: true };
       reply({ ok: true, token: p.token, id: p.id });
