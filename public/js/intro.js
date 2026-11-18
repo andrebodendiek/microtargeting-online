@@ -196,6 +196,20 @@ export function IntroPlayer({ onClose, startOffset = 0, autoClose = false }) {
     return () => cancelAnimationFrame(raf);
   }, [playing]);
   useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose?.(); if (e.key === ' ') { e.preventDefault(); setPlaying((x) => !x); } }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
+  // Hintergrundmusik (selbst erzeugt), synchron zur Animation; Stummschalten wird gemerkt
+  const audio = useRef(null);
+  const [muted, setMuted] = useState(() => { try { return localStorage.getItem('bubbl:introMuted') === '1'; } catch { return false; } });
+  const [blocked, setBlocked] = useState(false);
+  if (!audio.current && typeof Audio !== 'undefined') { audio.current = new Audio('/audio/bubbl-intro.m4a'); audio.current.preload = 'auto'; audio.current.volume = 0.8; }
+  const startAudio = () => {
+    const a = audio.current; if (!a) return;
+    a.muted = muted;
+    try { a.currentTime = Math.min(base.current.t, INTRO_LENGTH); } catch { /* noch nicht geladen */ }
+    a.play().then(() => setBlocked(false)).catch(() => setBlocked(true));
+  };
+  useEffect(() => { if (playing) startAudio(); else audio.current?.pause(); }, [playing]);
+  useEffect(() => () => audio.current?.pause(), []);
+  useEffect(() => { if (audio.current) audio.current.muted = muted; try { localStorage.setItem('bubbl:introMuted', muted ? '1' : '0'); } catch { /* privat */ } }, [muted]);
   const ended = t >= INTRO_LENGTH;
   const frame = useRef(null);
   const [k, setK] = useState(0.5);
@@ -205,6 +219,8 @@ export function IntroPlayer({ onClose, startOffset = 0, autoClose = false }) {
     <div class="intro-ctl">
       <button class="btn btn-sm" onClick=${() => { if (ended) { setT(0); base.current = { wall: performance.now(), t: 0 }; setPlaying(true); } else setPlaying(!playing); }}>
         <i class=${`bi bi-${ended ? 'arrow-counterclockwise' : playing ? 'pause-fill' : 'play-fill'}`}></i> ${ended ? 'Nochmal' : playing ? 'Pause' : 'Weiter'}</button>
+      ${blocked && !muted && playing ? html`<button class="btn btn-sm btn-primary" onClick=${startAudio}><i class="bi bi-volume-up-fill"></i> Ton an</button>`
+        : html`<button class="btn btn-sm" onClick=${() => setMuted(!muted)} title=${muted ? 'Musik an' : 'Musik aus'} aria-label=${muted ? 'Musik an' : 'Musik aus'}><i class=${`bi bi-volume-${muted ? 'mute' : 'up'}-fill`}></i></button>`}
       <span class="intro-time">${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} / 1:${String(INTRO_LENGTH - 60).padStart(2, '0')}</span>
       <a class="btn btn-sm" href="/video/bubbl-intro.mp4" download title="Als MP4-Video herunterladen"><i class="bi bi-download"></i><span class="intro-lbl"> MP4</span></a>
       ${onClose && html`<button class="btn btn-sm" onClick=${onClose} title="Schließen"><i class="bi bi-x-lg"></i><span class="intro-lbl"> Schließen</span></button>`}

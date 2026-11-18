@@ -34,4 +34,7 @@ for (let i = 0; i <= frames; i++) {
 ff.stdin.end();
 await new Promise((r) => ff.on('close', r));
 await browser.close();
+// Hintergrundmusik (selbst erzeugt) – zusätzlich als Audiodatei für den Film im Portal
+const { addMusic } = await import('./add-music.mjs');
+addMusic(OUT, { seed: 7, volume: 0.75, m4a: path.join(root, 'public/audio/bubbl-intro.m4a') });
 console.log(`Fertig: ${OUT}`);

@@ -141,4 +141,6 @@ const list = path.join(TMP, 'list.txt');
 fs.writeFileSync(list, segs.map((f) => `file '${f}'`).join('\n'));
 const OUT = path.join(root, 'public/video/bubbl-ablauf.mp4');
 spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', OUT], { stdio: 'inherit' });
+const { addMusic } = await import('./add-music.mjs');
+addMusic(OUT, { seed: 3, volume: 0.6 });
 console.log(`Fertig: ${OUT} (${slides.length} Folien)`);

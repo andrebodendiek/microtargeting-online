@@ -29,6 +29,9 @@ Fachdidaktischer Fokus: Neben der gesellschaftlichen Perspektive (Manipulation, 
 ## Musterablauf & Demo-Video
 Unter **`/ablauf`** steht ein druckbarer Unterrichtsverlauf (Doppelstunde oder Kurzvariante) – je Schritt: Zeitfenster, was die Lehrkraft tut (mit den Cockpit-Knöpfen), was die SchülerInnen tun, was der Beamer zeigt, die empfohlene Innehalten-Frage und Screenshots von Beamer und Handy. Dazu ein **Demo-Video** (2:16 Min., `/video/bubbl-ablauf.mp4`): ein echter, automatisch mit Test-SchülerInnen durchgespielter Ablauf, links Beamer, rechts ein Schüler-Handy, unten die Rollen. Neu erzeugen nach Änderungen: `TEACHER_PASSWORD=… node scripts/render-ablauf.mjs` (laufender Server, Playwright, ffmpeg).
 
+## Hintergrundmusik
+Intro-Film und Demo-Video haben eine ruhige Lo-Fi-Hintergrundmusik, die **selbst per Klangsynthese erzeugt** wird (`scripts/make-music.mjs`, keine fremden Samples – daher frei von Lizenz- und GEMA-Fragen). Die Render-Skripte legen sie automatisch unter; einzeln: `node scripts/add-music.mjs <video.mp4> [seed] [lautstärke]`. Im Portal spielt der Intro-Film die Musik synchron ab (Lautsprecher-Knopf zum Stummschalten; blockiert der Browser das automatische Abspielen, erscheint „Ton an“).
+
 ## Intro-Film (1:16 Min.)
 Ein kurzer animierter Erklärfilm, worum es geht und was die Ziele sind (Daten sammeln → Profil → Microtargeting → Feeds/Shorts → Lernziele). Er läuft im Portal: im Cockpit in der Lobby „Intro-Film auf dem Beamer“ (synchron auf dem Beamer), auf jedem Handy über die Karte „Worum geht's bei bubbl?“, frei unter `/intro` und als MP4 zum Herunterladen (`/video/bubbl-intro.mp4`). Nach Änderungen am Film (`public/js/intro.js`) lässt sich das MP4 neu erzeugen: `node scripts/render-intro.mjs` (laufender Server, Playwright, ffmpeg).
 
