@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C5D6A">
+<title>bubbl · Worum geht's?</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/intro.css">
+<script type="importmap">
+{ "imports": {
+  "preact": "/vendor/preact/dist/preact.module.js",
+  "preact/hooks": "/vendor/preact/hooks/dist/hooks.module.js",
+  "htm": "/vendor/htm/dist/htm.module.js"
+} }
+</script>
+</head>
+<body style="background:#0b1416">
+<div id="app"></div>
+<script type="module">
+import { html, render } from '/js/lib.js';
+import { IntroPlayer, IntroFilm } from '/js/intro.js';
+const qs = new URLSearchParams(location.search);
+// ?frame=<sek> zeigt ein Standbild (für das Rendern als MP4)
+if (qs.has('frame')) {
+  document.body.style.margin = '0';
+  const draw = (t) => render(html`<${IntroFilm} t=${t} />`, document.getElementById('app'));
+  window.__frame = (t) => new Promise((r) => { draw(t); requestAnimationFrame(() => requestAnimationFrame(r)); });
+  draw(Number(qs.get('frame')) || 0);
+} else {
+  render(html`<${IntroPlayer} onClose=${() => (history.length > 1 ? history.back() : (location.href = '/'))} />`, document.getElementById('app'));
+}
+</script>
+</body>
+</html>

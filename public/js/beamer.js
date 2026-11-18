@@ -4,6 +4,7 @@ import {
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
 import { WerkbankStage, FairnessStage, QuizStage } from './beamer-extra.js';
+import { IntroPlayer, INTRO_LENGTH } from './intro.js';
 
 const code = (qs.get('c') || '').toUpperCase();
 const key = location.hash.slice(1);
@@ -332,6 +333,15 @@ function Reflexion({ v }) {
   </div>`;
 }
 
+// Intro-Film: startet synchron, wenn die Lehrkraft ihn im Cockpit abspielt; blendet sich am Ende selbst aus
+function BeamerIntro({ intro }) {
+  const [hidden, setHidden] = useState(null);
+  if (!intro || hidden === intro.at) return null;
+  const offset = Math.max(0, (intro.now - intro.at) / 1000);
+  if (offset > INTRO_LENGTH) return null;
+  return html`<${IntroPlayer} key=${intro.at} startOffset=${offset} autoClose onClose=${() => setHidden(intro.at)} />`;
+}
+
 // Innehalten: Frage groß über der Bühne, Antworten live, Auflösung mit Erkenntnis
 const fmtMinB = (ms) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
 function PauseStage({ pz }) {
@@ -403,6 +413,7 @@ export function BeamerStage({ v }) {
       <section class="b-stage"><${Stage} v=${v} /></section>
     </main>
     ${v.pause && html`<${PauseStage} pz=${v.pause} />`}
+    <${BeamerIntro} intro=${v.intro} />
   </div>`;
 }
 

@@ -4,6 +4,7 @@ import {
 } from './lib.js';
 import { ADS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
 import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
+import { IntroPlayer } from './intro.js';
 
 const code = (qs.get('c') || '').toUpperCase();
 const tokenKey = `bubbl:token:${code}`;
@@ -165,7 +166,13 @@ function PhaseFlash({ phase }) {
 // ------------------------------------------------------------------ Phasen
 function Lobby({ v, act }) {
   const [edit, setEdit] = useState(false);
+  const [film, setFilm] = useState(false);
   return html`<section class="stagger bb-col">
+    <button class="glass intro-card" onClick=${() => setFilm(true)}>
+      <span class="intro-play"><i class="bi bi-play-fill"></i></span>
+      <span><b>Worum geht's bei bubbl?</b><small class="muted">${v.introOnBeamer ? 'Läuft gerade auf dem Beamer' : 'Kurzer Film · 1:16 Min.'}</small></span>
+    </button>
+    ${film && html`<${IntroPlayer} onClose=${() => setFilm(false)} />`}
     <div class="glass hero-card">
       <${Avatar} avatar=${v.me.avatar} size=${104} />
       ${v.me.email && html`<b class="me-mail"><i class="bi bi-envelope"></i> ${v.me.email}</b>`}
@@ -646,6 +653,7 @@ function PlayerMenu({ v, act }) {
   return html`<${Dropdown} btnClass="avatar-btn" caret=${false} title="Profil-Menü" label=${html`<${Avatar} id=${v.me.id} avatar=${v.me.avatar} size=${38} />`} items=${[
     { header: `Nutzer-ID #${v.me.id} · Raum ${code}` },
     { label: 'Aufgabe & Fortschritt', icon: 'list-check', hint: PHASE[v.phase].title, onClick: () => scrollTo({ top: 0, behavior: 'smooth' }) },
+    { label: 'Intro-Film: Worum geht\'s?', icon: 'film', hint: 'Kurzer Film über Ziele und Ablauf', href: '/intro', target: '_blank' },
     { label: 'Bildnachweise', icon: 'images', hint: 'Fotograf*innen und Lizenzen', href: '/bildnachweise', target: '_blank' },
     { label: 'Meine Daten herunterladen', icon: 'file-earmark-lock', hint: 'Auskunft nach Art. 15 DSGVO', onClick: auskunft },
     { divider: true },

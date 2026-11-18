@@ -635,6 +635,9 @@ export const actions = {
   },
   pauseReveal(room, _p, { value }) { if (room.pause) room.pause.revealed = value !== false; },
   pauseStop(room) { room.pause = null; },
+  // Intro-Film synchron auf dem Beamer
+  introPlay(room) { room.intro = { at: Date.now() }; },
+  introStop(room) { room.intro = null; },
   // Shorts
   shortsStop(room, _p, { value }) { room.shortsStopped = value !== false; },
   setGroup(room, _p, { id, group }) {
@@ -685,7 +688,7 @@ export const actions = {
   },
 };
 export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'replayDb', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData',
-  'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset', 'pauseStart', 'pauseReveal', 'pauseStop', 'shortsStop']);
+  'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset', 'pauseStart', 'pauseReveal', 'pauseStop', 'shortsStop', 'introPlay', 'introStop']);
 
 function logTrack(p, req, body) {
   (p.trackLog ||= []).push({ t: Date.now(), req, body });
@@ -805,6 +808,7 @@ export function staffView(room, { forBeamer = false } = {}) {
       differ: players.filter((x) => x.topLikes && x.topHidden && x.topLikes !== x.topHidden).length };
   }
   v.pause = pauseView(room, null);
+  v.intro = room.intro && Date.now() - room.intro.at < 90_000 ? { at: room.intro.at, now: Date.now() } : null;
   v.pauses = (PAUSES[room.phase] || []).map((x, i) => ({ i, q: x.q, answered: Object.keys(room.pauseAnswers?.[pauseKey(room.phase, i)] || {}).length }));
   if (at('shorts')) {
     const st = ps.map((p) => shortsStats(p)).filter((x) => x.count > 0);
@@ -927,6 +931,7 @@ export function playerView(room, p) {
     }
   }
   v.pause = pauseView(room, p);
+  v.introOnBeamer = !!(room.intro && Date.now() - room.intro.at < 80_000);
   if (phase === 'shorts') {
     v.shorts = { queue: nextShorts(p, 3), stopped: !!room.shortsStopped, count: shortsOf(p).count };
     if (room.shortsStopped) v.shorts.stats = shortsStats(p);

@@ -38,6 +38,7 @@ function App() {
         <${Logo} size=${54} />
         <h1>Das Microtargeting-Labor</h1>
         <p class="muted">Wie entsteht personalisierte Werbung? Ein Live-Spiel für die ganze Klasse: Likes verteilen, Daten auswerten, Werbung platzieren – und am Ende sehen, was ein soziales Netzwerk wirklich über euch weiß.</p>
+        <a class="btn intro-link" href="/intro"><i class="bi bi-play-circle-fill"></i> Intro-Film ansehen (1:16)</a>
       </header>
       <section class="landing-grid stagger">
         <form class="glass panel" onSubmit=${join}>

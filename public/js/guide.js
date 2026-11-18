@@ -6,6 +6,7 @@ export const GUIDE = {
     ziel: 'Alle sind mit einem ausgedachten Konto im Raum – ohne echte Namen oder echte E-Mail-Adressen.',
     ablauf: [
       '„Beamer öffnen“ klicken, Fenster auf den Projektor ziehen, Doppelklick für Vollbild.',
+      '„Intro-Film auf dem Beamer“ zeigen (1:16 Min.): worum es geht und was die Ziele sind. Auf den Handys gibt es den Film zusätzlich in der Lobby.',
       'SuS scannen den QR-Code oder geben den Raumcode auf der Startseite ein.',
       'Anmeldung in 3 Schritten: Adresse ausdenken (z. B. luna.star), Profilbild bauen, Zustimmung geben.',
       'Warten, bis die Zahl der Angemeldeten stimmt (Kopfzeile „online“), dann „Weiter“.',
