@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as G from '../src/game.js';
-import { ROUND1 } from '../public/shared/content.js';
+import { ROUND1, AD } from '../public/shared/content.js';
+const AD_OF = (id) => AD[id];
 import { normalizeAvatar, randomAvatar, AVATAR_KEYS } from '../public/shared/avatar.js';
 
 const reg = (email, consent = {}) => ({ email, avatar: randomAvatar(), consent: { agb: true, ...consent } });
@@ -81,4 +82,26 @@ test('Migration ersetzt unveränderte alte Standardbeiträge, eigene bleiben', a
   assert.equal(st.current.posts[1].headline, 'Mein eigener Beitrag');
   assert.equal(new ContentStore(dir).data.postsVersion, '2026-11');
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('Werbe-Mail kommt verzögert nach jedem Like und bezieht sich darauf, auch nach Entfernen', () => {
+  const r = G.createRoom('LIKE');
+  const p = G.actions.join(r, null, { email: 'mia', avatar: randomAvatar(), consent: { agb: true } });
+  const q = G.actions.join(r, null, { email: 'tom', avatar: randomAvatar(), consent: { agb: true, newsletter: false } });
+  G.actions.setPhase(r, null, { phase: 'feed' });
+  const post = ROUND1[0];
+  G.actions.like(r, p, { postId: post.id }); G.actions.like(r, q, { postId: post.id });
+  const t0 = p.likeAt[post.id];
+  assert.equal(G.mailsFor(r, p, t0 + 1000).filter((m) => m.kind === 'likead').length, 0, 'noch nicht sofort');
+  const later = G.mailsFor(r, p, t0 + G.likeMailDelay(0) + 10).filter((m) => m.kind === 'likead');
+  assert.equal(later.length, 1);
+  assert.equal(later[0].data.post, post.id);
+  assert.ok(AD_OF(later[0].data.ad).cats.includes(post.cat), 'Anzeige passt zur Kategorie des Likes');
+  assert.equal(G.mailsFor(r, q, t0 + 60000).filter((m) => m.kind === 'likead').length, 0, 'ohne Newsletter keine Like-Werbung');
+  G.actions.like(r, p, { postId: post.id }); // Like zurücknehmen
+  const after = G.mailsFor(r, p, t0 + 60000).find((m) => m.kind === 'likead');
+  assert.ok(after && after.data.stillLiked === false, 'Mail bleibt, auch wenn der Like entfernt wurde');
+  G.actions.setPhase(r, null, { phase: 'auswertung' });
+  const b = G.playerView(r, p).browse;
+  assert.ok(b && b.posts.length > 20 && b.ads.length > 0, 'Stöber-Feed mit Anzeigen ab Schritt 3');
 });

@@ -377,6 +377,8 @@ io.on('connection', (sock) => {
     try { fn(room, p, msg.data || {}); } catch (e) { console.error('Aktion fehlgeschlagen', msg.type, e); return; }
     // Tracking ändert nur die Lehrkraft-/Beamer-Ansicht
     schedule(room, { players: msg.type !== 'track' });
+    // Werbe-Mails kommen verzögert nach einem Like → Handys zu den passenden Zeitpunkten aktualisieren
+    if (msg.type === 'like' && room.phase === 'feed') for (const d of [12500, 17500, 22500]) setTimeout(() => { if (store.get(room.code)) schedule(room, { players: true }); }, d);
   });
 
   // Neuestes Inhaltspaket in einen Raum übernehmen (nur in der Lobby, damit nichts kaputtgeht)

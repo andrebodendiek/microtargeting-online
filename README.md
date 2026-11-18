@@ -89,4 +89,6 @@ Lokal: `TEACHER_PASSWORD=test npm start`.
 Hinweis: Eine Instanz reicht für viele Klassen gleichzeitig. Nicht auf mehrere Instanzen skalieren (Spielstand liegt im Prozess).
 
 ## bubbl-Postfach
+**Werbung pro Like:** Etwa 12–22 Sekunden nach jedem Like kommt eine passende Werbe-Mail („Weil dir ‚…‘ gefällt“) mit Benachrichtigung – inklusive des auslösenden Beitrags und der Erklärung, welche Kategorie bubbl abgeleitet hat. Wird der Like zurückgenommen, bleibt die Mail (gespeichert ist gespeichert). Ab Schritt 3 gibt es unten eine Tab-Leiste (Aufgabe · Feed · Postfach): Im Tab „Feed“ können die SuS jederzeit frei durch alle Beiträge stöbern – sortiert nach ihrem Profil, mit gesponserten Beiträgen und „Warum sehe ich diese Werbung?“.
+
 Jede Person hat ein simuliertes Postfach (Briefumschlag oben rechts). Je nach Spielphase kommen personalisierte Mails: Willkommen, „Das wird dir gefallen“ (aus den Likes), Rabatt-Mails zu den erhaltenen Anzeigen (nur mit Newsletter-Häkchen), Wochenrückblick aus den Tracking-Daten, Wahlwerbung und „Wir vermissen dich“. Jede Mail erklärt, *warum* sie ankommt; abbestellen ist möglich. Im Schritt „Dein Datenprofil“ wird aufgelöst, ob die AGB gelesen und das Häkchen bemerkt wurde (Beamer: Klassenstatistik, Stichwort Dark Pattern / EuGH Planet49).

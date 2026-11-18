@@ -430,6 +430,57 @@ function Reflexion({ v, act }) {
   </section>`;
 }
 
+// ------------------------------------------------------------------ Freies Stöbern im Netzwerk (ab Schritt 2)
+function SponsoredPost({ item, v }) {
+  const [why, setWhy] = useState(false);
+  const ad = AD[item.ad];
+  if (!ad) return null;
+  return html`<article class="post card sponsored-post">
+    <div class="post-head"><span class="acc-pic mono" style="--s:40px;--c:#2d3133">${ad.brand.slice(0, 2).toUpperCase()}</span>
+      <div class="page-meta"><b>${ad.brand}</b><small>Gesponsert</small></div>
+      <button class="icon-btn" onClick=${() => setWhy(!why)} aria-expanded=${why} title="Warum sehe ich das?"><i class="bi bi-three-dots"></i></button></div>
+    <${AdVisual} ad=${ad} />
+    <div class="post-body"><p class="post-caption"><b>${ad.product}</b> – ${ad.slogan}</p>
+      <button class="btn btn-sm btn-primary mt-2">${ad.cta} · ${ad.price}</button>
+      <button class="why-link" onClick=${() => setWhy(!why)}><i class="bi bi-info-circle"></i> Warum sehe ich diese Werbung?</button>
+      ${why && html`<div class="why-box">
+        ${item.generic ? html`<p>Allgemeine Werbung: bubbl weiß noch nicht genug über dich. Sobald du likest oder länger hinschaust, wird sie persönlich.</p>` : html`<p>Du siehst diese Anzeige, weil bubbl dich der Zielgruppe <b><${Ic} k=${CAT[item.cat]} /> ${CAT[item.cat]?.name}</b> zuordnet.</p>
+        ${item.because.length ? html`<p class="muted small">Grundlage – deine Likes:</p><ul>${item.because.map((id) => POST[id] && html`<li>„${POST[id].headline}“</li>`)}</ul>`
+          : html`<p class="muted small">Du hast hier nichts geliked – die Zuordnung stammt aus anderen Signalen (z. B. wie lange du Beiträge angesehen hast).</p>`}`}
+      </div>`}
+    </div>
+  </article>`;
+}
+
+function Browse({ v }) {
+  const [open, setOpen] = useState(null);
+  const b = v.browse;
+  if (!b) return null;
+  const items = [];
+  let ai = 0;
+  b.posts.forEach((id, i) => {
+    while (b.ads[ai] && b.ads[ai].slot === i) { items.push({ ad: b.ads[ai] }); ai++; }
+    if (POST[id]) items.push({ post: POST[id] });
+  });
+  return html`<section class="bb-col">
+    <div class="browse-head"><b>Für dich</b><small class="muted">Sortiert nach deinem Profil · Likes sind nur in Schritt 2 möglich</small></div>
+    ${items.map((x) => (x.ad ? html`<${SponsoredPost} key=${`ad-${x.ad.ad}`} item=${x.ad} v=${v} />`
+      : html`<${Post} key=${x.post.id} post=${x.post} liked=${v.me.likes.includes(x.post.id)} canLike=${false} onLike=${() => {}} onOpen=${setOpen} />`))}
+    ${open && html`<${ArticleSheet} post=${open} onClose=${() => setOpen(null)} liked=${v.me.likes.includes(open.id)} canLike=${false} onLike=${() => {}} />`}
+  </section>`;
+}
+
+function TabBar({ tab, setTab, v, onMail }) {
+  const n = v.mail?.unread || 0;
+  const t = (id, icon, label, extra) => html`<button class=${`tab ${tab === id ? 'on' : ''}`} onClick=${() => { if (id === 'mail') onMail(); else { setTab(id); scrollTo({ top: 0 }); } }} aria-current=${tab === id ? 'page' : null}>
+    <i class=${`bi bi-${icon}${tab === id ? '-fill' : ''}`}></i><span>${label}</span>${extra}</button>`;
+  return html`<nav class="tabbar" aria-label="Navigation">
+    ${t('task', 'clipboard-check', 'Aufgabe')}
+    ${t('browse', 'house', 'Feed')}
+    ${t('mail', 'envelope', 'Postfach', n > 0 && html`<span class="tab-badge">${n}</span>`)}
+  </nav>`;
+}
+
 // ------------------------------------------------------------------ Innehalten (von der Lehrkraft gestartet)
 const fmtMin = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} Min.`; };
 function PauseOverlay({ pz, act }) {
@@ -585,6 +636,18 @@ function MailBody({ m, act, v }) {
       ${unsub}
     </div>`;
   }
+  if (m.kind === 'likead') {
+    const ad = AD[d.ad]; const post = POST[d.post];
+    const secs = Math.max(1, Math.round((m.at - d.likedAt) / 1000));
+    return html`<div class="bb-col">
+      ${ad && html`<${AdVisual} ad=${ad} />`}
+      <p>Hallo ${v.me.name || 'du'},<br />${d.n === 1 ? html`dir gefällt <b>${CAT[d.cat]?.name}</b>? Dann haben wir genau das Richtige:` : html`du kannst nicht genug von <b>${CAT[d.cat]?.name}</b> bekommen – wir auch nicht!`} <b>${ad?.product}</b> – ${ad?.slogan}</p>
+      <div class="mail-code"><small>Dein persönlicher Code</small><b>${d.code}</b><small>gültig nur heute</small></div>
+      ${post && html`<div class="mail-trigger"><small class="muted">Ausgelöst durch deinen Like</small><div class="mail-post"><${PostArt} post=${post} small /><b>${post.headline}</b></div></div>`}
+      ${why(html`Du hast diesen Beitrag geliked. bubbl hat daraus in ${secs} Sekunden „Interesse an ${CAT[d.cat]?.name}“ abgeleitet und deine Adresse an Werbepartner mit passenden Produkten vermittelt.${d.stillLiked ? '' : html` <b>Du hast den Like inzwischen zurückgenommen – die Mail kommt trotzdem: Gespeichert ist gespeichert.</b>`}`)}
+      ${unsub}
+    </div>`;
+  }
   if (m.kind === 'recs') return html`<div class="bb-col"><p>Wir haben gesehen, was du magst. Diese Beiträge zu <b>${CAT[d.cat]?.name}</b> hast du noch nicht entdeckt:</p>
     ${(d.posts || []).map((id) => POST[id] && html`<div class="mail-post"><${PostArt} post=${POST[id]} small /><b>${POST[id].headline}</b></div>`)}
     ${why('Ausgewählt aus deinen Likes in der Kategorie, die du am häufigsten geliked hast.')}${unsub}</div>`;
@@ -618,14 +681,23 @@ function Postfach({ v, act, onClose }) {
   </div></div>`;
 }
 
-function MailButton({ v, act }) {
-  const [open, setOpen] = useState(false);
+function MailButton({ v, act, open, setOpen }) {
   const n = v.mail?.unread || 0;
   const prev = useRef(n);
   const [ping, setPing] = useState(false);
-  useEffect(() => { if (n > prev.current) { setPing(true); navigator.vibrate?.(60); setTimeout(() => setPing(false), 1600); } prev.current = n; }, [n]);
+  const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (n > prev.current) {
+      setPing(true); navigator.vibrate?.(60); setTimeout(() => setPing(false), 1600);
+      const m = (v.mail?.list || []).find((x) => !x.read);
+      if (m) { setToast(m); setTimeout(() => setToast((x) => (x === m ? null : x)), 4500); }
+    }
+    prev.current = n;
+  }, [n]);
   return html`<button class=${`icon-btn mail-btn ${ping ? 'ping' : ''}`} onClick=${() => setOpen(true)} aria-label=${`Postfach, ${n} ungelesen`} title="Postfach">
       <i class="bi bi-envelope"></i>${n > 0 && html`<span class="mail-badge">${n}</span>`}</button>
+    ${toast && !open && html`<button class="mail-toast" onClick=${() => { setToast(null); setOpen(true); }}>
+      <i class="bi bi-envelope-paper-heart"></i><span><b>${toast.from}</b><small>${toast.subject}</small></span></button>`}
     ${open && html`<${Postfach} v=${v} act=${act} onClose=${() => setOpen(false)} />`}`;
 }
 
@@ -740,6 +812,8 @@ function Join({ onJoin, error }) {
 
 function App() {
   const joinRef = useRef(null);
+  const [tab, setTab] = useState('task');
+  const [mailOpen, setMailOpen] = useState(false);
   const { state: v, status, error, act, sock } = useRoom(() => (code ? { code, role: 'player', token: store.get(tokenKey), join: !!joinRef.current, reg: joinRef.current } : null),
     { onKicked: () => store.del(tokenKey) });
 
@@ -750,6 +824,7 @@ function App() {
   if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(reg) => { joinRef.current = reg; sock.current?.greet(); }} />`;
   if (!v) return html`<${Aurora} /><main class="join"><${Logo} size=${46} /><div class="loader"><span class="dots"><i></i><i></i><i></i></span></div></main>`;
 
+  const showTabs = !!v.browse;
   const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: Werkbank, fairness: Fairness, quiz: Quiz, shorts: Shorts }[v.phase] || Lobby;
   return html`
     <${Aurora} />
@@ -758,14 +833,16 @@ function App() {
       <${Logo} size=${26} />
       <span class="spacer"></span>
       ${v.me.group && ['werbung', 'werkbank'].includes(v.phase) && html`<${GroupBadge} gid=${v.me.group} />`}
-      <${MailButton} v=${v} act=${act} />
+      <${MailButton} v=${v} act=${act} open=${mailOpen} setOpen=${setMailOpen} />
       <${PlayerMenu} v=${v} act=${act} />
     </header>
     <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} compact /></nav>
-    <main class="feed-main">
-      <${TaskCard} key=${v.phase} phase=${v.phase} settings=${v.settings} />
-      <${Phase} v=${v} act=${act} />
+    <main class=${`feed-main ${showTabs ? 'with-tabs' : ''}`}>
+      ${showTabs && tab === 'browse' ? html`<${Browse} v=${v} />` : html`
+        <${TaskCard} key=${v.phase} phase=${v.phase} settings=${v.settings} />
+        <${Phase} v=${v} act=${act} />`}
     </main>
+    ${showTabs && html`<${TabBar} tab=${tab} setTab=${setTab} v=${v} onMail=${() => setMailOpen(true)} />`}
     <${PhaseFlash} phase=${v.phase} />
     ${v.pause && html`<${PauseOverlay} pz=${v.pause} act=${act} />`}`;
 }

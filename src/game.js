@@ -376,7 +376,10 @@ function extendBubbleFeed(room, p, n, explore = false) {
 // ---------------------------------------------------------------- bubbl-Postfach (simulierte E-Mails)
 // Mails ergeben sich aus dem Spielstand: Phase erreicht + Profil + Einwilligung. Nichts wird wirklich verschickt.
 const DISCOUNTS = ['BUBBL20', 'NURHEUTE15', 'FUERDICH10', 'TOPDEAL25'];
-export function mailsFor(room, p) {
+export const LIKE_MAIL_MAX = 10;
+// Verzögerung, bis nach einem Like die passende Werbe-Mail kommt (wirkt wie eine echte Auswertung)
+export const likeMailDelay = (i) => 12000 + (i % 3) * 5000;
+export function mailsFor(room, p, now = Date.now()) {
   const at = room.phaseAt || {};
   const name = p.name || `nutzer${p.id}`;
   const prof = profileOf(p);
@@ -386,6 +389,23 @@ export function mailsFor(room, p) {
   // Newsletter-Zustand zu einem Zeitpunkt (spätere Abmeldung löscht bereits empfangene Mails nicht)
   const sub = (t) => p.consent?.newsletter !== false || (p.consent?.unsubAt && p.consent.unsubAt > t);
   add({ id: 'welcome', at: p.joinedAt, kind: 'welcome', from: 'bubbl Team', fromIcon: 'bubbl', subject: `Willkommen bei bubbl, ${name}! 🎉`, preview: 'Bestätige jetzt deine E-Mail-Adresse und entdecke Beiträge, die zu dir passen.' });
+  // Werbe-Mail kurz nach jedem Like – mit ausdrücklichem Bezug auf den Like (auch wenn er später entfernt wird)
+  const likeLog = Object.entries(p.likeAt || {}).filter(([id]) => POST[id]).sort((a, b) => a[1] - b[1]).slice(0, LIKE_MAIL_MAX);
+  const perCat = {};
+  likeLog.forEach(([postId, t], i) => {
+    const post = POST[postId];
+    const fit = ADS.filter((a) => a.cats.includes(post.cat));
+    if (!fit.length) return;
+    const n = (perCat[post.cat] = (perCat[post.cat] || 0) + 1);
+    const ad = fit[(n - 1 + p.id) % fit.length];
+    const when = t + likeMailDelay(i);
+    if (when > now || !sub(when)) return;
+    const head = post.headline.length > 42 ? `${post.headline.slice(0, 40)}…` : post.headline;
+    add({ id: `like-${postId}`, at: when, kind: 'likead', from: ad.brand, fromIcon: 'ad',
+      subject: n === 1 ? `Weil dir „${head}“ gefällt …` : `${name}, noch mehr ${CAT[post.cat].name} für dich! 🔥`,
+      preview: `${ad.product}: ${ad.slogan}`,
+      data: { ad: ad.id, post: postId, cat: post.cat, n, code: DISCOUNTS[(p.id + i) % DISCOUNTS.length], likedAt: t, stillLiked: p.likes.includes(postId) } });
+  });
   if (at.auswertung && top && sub(at.auswertung)) {
     const recs = POSTS.filter((x) => x.cat === top && !p.likes.includes(x.id)).slice(0, 2).map((x) => x.id);
     add({ id: 'recs', at: at.auswertung, kind: 'recs', from: 'bubbl', fromIcon: 'bubbl', subject: `${name}, das hier wird dir gefallen 👀`, preview: `Neue Beiträge zu ${CAT[top].name} – ausgewählt nur für dich.`, data: { cat: top, posts: recs } });
@@ -413,7 +433,7 @@ export function mailsFor(room, p) {
   if (at.reflexion && sub(at.reflexion)) add({ id: 'miss', at: at.reflexion, kind: 'miss', from: 'bubbl', fromIcon: 'bubbl', subject: `Wir vermissen dich, ${name}! 🥺 Hier sind 10 % für dich`, preview: 'Komm zurück – deine Freunde haben 12 neue Beiträge geliked.' });
   return out.sort((a, b) => b.at - a.at);
 }
-const isAdMail = (m) => m.kind === 'ad' || m.kind === 'miss' || m.kind === 'recs' || m.kind === 'weekly';
+const isAdMail = (m) => m.kind === 'ad' || m.kind === 'likead' || m.kind === 'miss' || m.kind === 'recs' || m.kind === 'weekly';
 
 // ---------------------------------------------------------------- Shorts-Feed (Kurzvideos, lernt nur aus der Wiedergabezeit)
 export const SHORT_AD_EVERY = 5;
@@ -504,7 +524,7 @@ export const actions = {
     if (room.phase === 'feed') {
       const i = p.likes.indexOf(postId);
       if (i >= 0) { p.likes.splice(i, 1); logTrack(p, 'DELETE /like', { post: postId }); }
-      else if (p.likes.length < room.settings.maxLikes && POST[postId].round === 1) { p.likes.push(postId); logTrack(p, 'POST /like', { post: postId }); }
+      else if (p.likes.length < room.settings.maxLikes && POST[postId].round === 1) { p.likes.push(postId); (p.likeAt ||= {})[postId] ??= Date.now(); logTrack(p, 'POST /like', { post: postId }); }
     } else if (room.phase === 'blase') {
       const i = p.bubble.likes.indexOf(postId);
       if (i >= 0) p.bubble.likes.splice(i, 1);
@@ -891,6 +911,35 @@ export function staffView(room, { forBeamer = false } = {}) {
   return v;
 }
 
+// Freies Stöbern: alle Beiträge, sortiert nach dem eigenen Profil, dazwischen gesponserte Anzeigen mit Begründung
+export function browseFeed(p) {
+  const prof = profileOf(p);
+  const score = (c) => (prof.full[c] || 0) + (prof.likes[c] || 0) * 2;
+  const rnd = seeded(p.id * 6151 + 7);
+  const posts = shuffle(POSTS.map((x) => x.id), rnd).sort((a, b) => score(POST[b].cat) - score(POST[a].cat));
+  // Etwas Abwechslung: jeder 4. Beitrag aus dem hinteren Teil
+  const mixed = [];
+  const tail = posts.slice(Math.ceil(posts.length / 2)).reverse();
+  posts.slice(0, Math.ceil(posts.length / 2)).forEach((id, i) => { mixed.push(id); if (i % 3 === 2 && tail.length) mixed.push(tail.pop()); });
+  mixed.push(...tail);
+  let cats = CAT_IDS.filter((c) => score(c) > 0).sort((a, b) => score(b) - score(a));
+  const generic = !cats.length; // noch kein Profil → allgemeine Werbung
+  if (generic) cats = shuffle(CAT_IDS, rnd);
+  const ads = [];
+  {
+    const used = new Set();
+    for (let k = 0; k < 6; k++) {
+      const c = cats[k % cats.length];
+      const ad = ADS.find((a) => a.cats.includes(c) && !used.has(a.id)) || ADS.find((a) => a.cats.includes(c));
+      if (!ad) continue;
+      used.add(ad.id);
+      const because = p.likes.filter((id) => POST[id]?.cat === c).slice(0, 3);
+      ads.push({ slot: 3 + k * 5, ad: ad.id, cat: c, because, tracking: !because.length && !generic, generic });
+    }
+  }
+  return { posts: mixed, ads };
+}
+
 export function playerView(room, p) {
   const list = activePhases(room);
   const phase = room.phase;
@@ -944,6 +993,7 @@ export function playerView(room, p) {
     }
   }
   v.pause = pauseView(room, p);
+  if (list.findIndex((x) => x.id === phase) > list.findIndex((x) => x.id === 'feed')) v.browse = browseFeed(p);
   v.introOnBeamer = !!(room.intro && Date.now() - room.intro.at < 80_000);
   if (phase === 'shorts') {
     v.shorts = { queue: nextShorts(p, 3), stopped: !!room.shortsStopped, count: shortsOf(p).count };
@@ -1004,7 +1054,7 @@ export function auskunft(room, p) {
       likes: p.likes.map((id) => POST[id]?.headline || id),
       verweildauer_ms_je_beitrag: p.track.dwell, lesezeit_ms_je_beitrag: p.track.read, geoeffnete_artikel: p.track.opens,
       interaktionen_gesamt: ts.events, gescrollt_px: p.track.scrollPx, datenpunkte_gesamt: ts.dataPoints,
-      werbebewertungen: p.ratings, empfangene_mails: mailsFor(room, p).map((m) => ({ von: m.from, betreff: m.subject, gelesen: m.read })), filterblase_likes: p.bubble.likes, shorts: p.shorts ? { angesehen: p.shorts.count, wiedergabezeit_s: Math.round(p.shorts.totalMs / 1000), wiedergabezeit_je_kategorie_ms: p.shorts.watch, werbeclips: p.shorts.ads } : null, wahl_sympathie: p.vote?.score ?? null,
+      werbebewertungen: p.ratings, empfangene_mails: mailsFor(room, p).map((m) => ({ von: m.from, betreff: m.subject, gelesen: m.read })), filterblase_likes: p.bubble.likes, like_zeitpunkte: Object.fromEntries(Object.entries(p.likeAt || {}).map(([k, t]) => [k, new Date(t).toISOString()])), shorts: p.shorts ? { angesehen: p.shorts.count, wiedergabezeit_s: Math.round(p.shorts.totalMs / 1000), wiedergabezeit_je_kategorie_ms: p.shorts.watch, werbeclips: p.shorts.ads } : null, wahl_sympathie: p.vote?.score ?? null,
       fairness_antworten: p.fair || {}, reflexion: p.reflect,
       protokoll_letzte_anfragen: (p.trackLog || []).slice(-20),
     },
