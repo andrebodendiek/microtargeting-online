@@ -4,6 +4,7 @@ import {
 } from './lib.js';
 
 import { PHASES, ADS } from '/shared/content.js';
+import { GUIDE } from './guide.js';
 const OPTIONAL = PHASES.filter((p) => p.optional).map((p) => p.id);
 const code = (qs.get('c') || '').toUpperCase();
 const key = location.hash.slice(1);
@@ -108,13 +109,39 @@ function NowCard({ v, act, sock, copy }) {
     </div>
     <div class="cp-progress"><div class="cp-bar"><i style=${`width:${pct}%`}></i></div><span><b>${v.progress.done}</b> / ${v.progress.total} ${v.progress.label}</span></div>
     <div class="cp-actions"><${PhaseActions} v=${v} act=${act} sock=${sock} copy=${copy} /></div>
-    <details class="cp-hint" open=${idx < 2}><summary><i class="bi bi-lightbulb"></i> Didaktischer Hinweis</summary><p>${HINTS[v.phase]}</p>
-      <ul class="cp-tasks">${p.task.map((t) => html`<li>${t.replace('{maxLikes}', v.settings.maxLikes)}</li>`)}</ul></details>
+    <${Guide} v=${v} p=${p} />
     ${v.phase === 'reflexion' && v.reflexion && html`<div class="cp-notes"><h3>Notizen für den Beamer <small class="muted">(Häkchen = sichtbar)</small></h3>
       ${v.reflexion.notes.length ? v.reflexion.notes.map((n) => html`<label class=${`note-mod ${n.hidden ? 'hidden' : ''}`}>
         <input class="form-check-input" type="checkbox" checked=${!n.hidden} onChange=${(e) => act('hideNote', { key: n.key, value: !e.target.checked })} />
         <span>${n.kind === 'pro' ? '👍' : '👎'} ${n.text}</span><small class="muted">#${n.id}</small></label>`) : html`<small class="muted">Noch keine Notizen.</small>`}</div>`}
   </section>`;
+}
+
+// ------------------------------------------------------------------ Ausführungshinweise (je Schritt)
+const GUIDE_TABS = [['ablauf', 'list-ol', 'Ablauf'], ['impulse', 'chat-dots', 'Impulse'], ['tipps', 'tools', 'Tipps & Stolpersteine'], ['sicherung', 'bookmark-check', 'Sicherung']];
+function Guide({ v, p }) {
+  const g = GUIDE[v.phase];
+  const [open, setOpen] = useState(() => store.get('bubbl:guideOpen', true));
+  const [tab, setTab] = useState('ablauf');
+  useEffect(() => setTab('ablauf'), [v.phase]);
+  const toggle = () => { store.set('bubbl:guideOpen', !open); setOpen(!open); };
+  if (!g) return html`<div class="cp-hint"><p>${HINTS[v.phase]}</p></div>`;
+  const items = g[tab];
+  return html`<div class=${`cp-guide ${open ? 'open' : ''}`}>
+    <button class="cp-guide-head" onClick=${toggle} aria-expanded=${open}>
+      <i class="bi bi-lightbulb"></i><b>Hinweise zur Durchführung</b>
+      <span class="cp-guide-meta"><span><i class="bi bi-clock"></i> ${g.dauer}</span><span><i class=${`bi bi-${MODE[p.mode]?.[0] || 'people'}`}></i> ${g.sozial}</span></span>
+      <i class=${`bi bi-chevron-${open ? 'up' : 'down'} ms-auto`}></i>
+    </button>
+    ${open && html`<div class="cp-guide-body">
+      <p class="cp-goal"><b>Ziel:</b> ${g.ziel}</p>
+      <div class="cp-tabs" role="tablist">${GUIDE_TABS.map(([k, ic, label]) => html`<button role="tab" aria-selected=${tab === k} class=${tab === k ? 'on' : ''} onClick=${() => setTab(k)}><i class=${`bi bi-${ic}`}></i> ${label}</button>`)}</div>
+      ${Array.isArray(items)
+        ? html`${tab === 'ablauf' ? html`<ol class="cp-guide-list">${items.map((t) => html`<li>${t}</li>`)}</ol>` : html`<ul class="cp-guide-list">${items.map((t) => html`<li>${t}</li>`)}</ul>`}`
+        : html`<p class="cp-merk"><i class="bi bi-bookmark-check"></i> ${items}</p>`}
+      ${tab === 'ablauf' && html`<details class="cp-sus"><summary>Was die SchülerInnen als Aufgabe sehen</summary><ol>${p.task.map((t) => html`<li>${t.replace('{maxLikes}', v.settings.maxLikes)}</li>`)}</ol></details>`}
+    </div>`}
+  </div>`;
 }
 
 // ------------------------------------------------------------------ Teilnehmende

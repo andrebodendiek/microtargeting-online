@@ -41,7 +41,7 @@ Unter **/editor** (Lehrkraft-Anmeldung nötig) lassen sich alle Inhalte bearbeit
 1. Startseite → mit dem **Lehrkraft-Passwort anmelden** → **„Raum erstellen“**. Es öffnet sich das Lehrkraft-Cockpit (Link mit geheimem Schlüssel nach `#` – als Lesezeichen speichern).
 2. **„Beamer öffnen“** → Fenster auf den Projektor ziehen, Doppelklick = Vollbild.
 3. SuS scannen den QR-Code (oder öffnen die Startseite und geben den 4-stelligen Code ein).
-4. Im Cockpit mit **„Weiter ▶“** durch die Schritte führen. Pro Schritt gibt es didaktische Hinweise und Werkzeuge (Gruppen neu bilden, Auswertung automatisch ausfüllen, Wahlbotschaften aufdecken, Notizen ausblenden …).
+4. Im Cockpit mit **„Weiter“** durch die Schritte führen. Pro Schritt gibt es **Hinweise zur Durchführung** (Ziel, Dauer, Sozialform, Ablauf mit den passenden Knöpfen, Impulsfragen, Tipps & Stolpersteine, Sicherung/Merksatz) und Werkzeuge (Gruppen neu bilden, Auswertung automatisch ausfüllen, Wahlbotschaften aufdecken, Notizen ausblenden …).
 5. Am Ende **CSV-Export** (entspricht der erweiterten Auswertungstabelle).
 
 **Zugriffsschutz:** Raum erstellen, Lehrkraft-Cockpit, Beamer-Ansicht und CSV-Export erfordern die Anmeldung mit dem Lehrkraft-Passwort (`TEACHER_PASSWORD`). Die Anmeldung gilt 30 Tage pro Browser (signiertes HttpOnly-Cookie) und wird bei einer Passwortänderung für alle ungültig. Zusätzlich braucht jeder Raum seinen geheimen Schlüssel aus dem Cockpit-Link. Fehlversuche werden gebremst. SchülerInnen treten weiterhin ohne Anmeldung nur mit dem Raumcode bei.

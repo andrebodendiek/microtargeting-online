@@ -130,3 +130,24 @@ body { background: var(--bg); }
 .cp-step.now::before { display: none; }
 .cp-step.now { background: var(--field); }
 .cp-num { background: transparent; }
+
+/* ---------- Hinweise zur Durchführung */
+.cp-guide { border-top: 1px solid var(--line); padding-top: 12px; }
+.cp-guide-head { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cp-guide-head > .bi-lightbulb { color: var(--gn-primary); font-size: 18px; }
+.cp-guide-head b { font-size: 15.5px; }
+.cp-guide-meta { display: inline-flex; gap: 12px; font-size: 13px; color: var(--muted); }
+.cp-guide-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.cp-guide-body { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.cp-goal { margin: 0; font-size: 15px; max-width: 95ch; }
+.cp-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.cp-tabs button { border: 0; background: none; padding: 8px 12px; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; }
+.cp-tabs button:hover { color: var(--text); }
+.cp-tabs button.on { color: var(--gn-primary); border-bottom-color: var(--gn-primary); }
+.cp-guide-list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; max-width: 95ch; }
+.cp-guide-list li::marker { color: var(--muted); font-weight: 700; }
+.cp-merk { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--field); font-size: 15px; display: flex; gap: 10px; max-width: 95ch; }
+.cp-merk .bi { color: var(--gn-primary); }
+.cp-sus { font-size: 13.5px; color: var(--muted); }
+.cp-sus summary { cursor: pointer; font-weight: 600; }
+.cp-sus ol { margin: 6px 0 0; padding-left: 20px; }
