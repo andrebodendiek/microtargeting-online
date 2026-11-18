@@ -1,6 +1,6 @@
 import {
   html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, SelectMenu, AvatarBuilder, AvatarArt, randomAvatar, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
-  PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, confetti, CATEGORIES, CAT, POST, AD, PHASE, PAGES, fmtCount,
+  PostArt, PageHead, AdVisual, Credit, CountUp, Radar, Stepper, Ic, confetti, CATEGORIES, CAT, POST, AD, PHASE, PAGES, fmtCount,
 } from './lib.js';
 import { ADS, PARTY, PARTY_MESSAGES, CONTRADICTIONS } from '/shared/content.js';
 import { TrackingInspector, Auskunft, Werkbank, Fairness, Quiz } from './play-extra.js';
@@ -135,11 +135,11 @@ function ArticleSheet({ post, onClose, liked, canLike, onLike }) {
 function TaskCard({ phase, settings }) {
   const [open, setOpen] = useState(true);
   const p = PHASE[phase];
-  return html`<section class=${`task glass ${open ? '' : 'closed'}`}>
+  return html`<section class=${`task ${open ? '' : 'closed'}`}>
     <button class="task-head" onClick=${() => setOpen(!open)} aria-expanded=${open}>
-      <span class="task-icon">${p.icon}</span>
-      <span><small>${p.mode === 'GA' ? 'Gruppenarbeit' : p.mode === 'EA' ? 'Einzelarbeit' : 'Plenum'}</small><b>${p.title}</b></span>
-      <span class="task-toggle">${open ? '−' : '+'}</span>
+      <span class="task-mode"><${Ic} k=${p} color=${false} /> ${p.mode === 'GA' ? 'Gruppenarbeit' : p.mode === 'EA' ? 'Einzelarbeit' : 'Plenum'}</span>
+      <b>${p.title}</b>
+      <i class=${`bi bi-chevron-${open ? 'up' : 'down'} task-toggle`}></i>
     </button>
     ${open && html`<ol class="task-list">${p.task.map((t) => html`<li>${t.replace('{maxLikes}', settings.maxLikes)}</li>`)}</ol>`}
   </section>`;
@@ -157,7 +157,7 @@ function PhaseFlash({ phase }) {
   if (!show) return null;
   const p = PHASE[phase];
   return html`<div class="phase-flash" onClick=${() => setShow(false)}>
-    <div class="flash-inner"><span class="flash-icon">${p.icon}</span><small>Neuer Schritt</small><h2>${p.title}</h2></div>
+    <div class="flash-inner"><span class="flash-icon"><${Ic} k=${p} color=${false} /></span><small>Neuer Schritt</small><h2>${p.title}</h2></div>
   </div>`;
 }
 
@@ -221,9 +221,9 @@ function Auswertung({ v }) {
       <h3>Nutzer-ID #${v.me.id}</h3>
       <div class="db-row-mine">
         ${CATEGORIES.map((c) => { const n = r.counts[c.id] || 0; return html`<div class=${`db-cell ${n ? 'has' : ''} ${r.top === c.id ? 'top' : ''}`} style=${`--c:${c.color};--k:${n / max}`}>
-          <span class="db-cell-icon">${c.icon}</span><b>${n}</b><small>${c.name}</small></div>`; })}
+          <span class="db-cell-icon"><${Ic} k=${c} /></span><b>${n}</b><small>${c.name}</small></div>`; })}
       </div>
-      ${r.top ? html`<p class="db-verdict">So sieht bubbl dich: <b>${CATEGORIES.filter((c) => r.counts[c.id] === max).map((c) => `${c.icon} ${c.name}`).join(' und ')}-Fan</b> – wie ${r.sameTop - 1 > 0 ? `${r.sameTop - 1} weitere Person${r.sameTop - 1 === 1 ? '' : 'en'}` : 'sonst niemand'} in der Klasse.</p>`
+      ${r.top ? html`<p class="db-verdict">So sieht bubbl dich: <b>${CATEGORIES.filter((c) => r.counts[c.id] === max).map((c) => c.name).join(' und ')}-Fan</b> – wie ${r.sameTop - 1 > 0 ? `${r.sameTop - 1} weitere Person${r.sameTop - 1 === 1 ? '' : 'en'}` : 'sonst niemand'} in der Klasse.</p>`
         : html`<p class="db-verdict">Du hast nichts geliked – für bubbl bist du (noch) ein unbeschriebenes Blatt. Oder doch nicht? 🤔</p>`}
       <p class="muted small">Die ganze Tabelle hat ${r.players} Zeilen (eine pro Person) und 7 Spalten (eine pro Kategorie) – also ${r.rows} Felder. Erstellt in Millisekunden, ohne dass jemand zählen musste.</p>
     </div>
@@ -233,7 +233,7 @@ function Auswertung({ v }) {
       <p class="muted small">Du hast nur geliked – die Kategorie hat bubbl selbst zugeordnet.</p>
     </div>`}
     <div class="glass pad">
-      <h3>🤔 Denk mal nach</h3>
+      <h3>Denk mal nach</h3>
       <ol class="think"><li>Welche Werbung würdest du an deiner Stelle als Werbekunde schicken?</li><li>Stimmt das Bild, das die Tabelle von dir zeichnet?</li><li>Was steht <b>nicht</b> in der Tabelle – und könnte bubbl trotzdem wissen?</li></ol>
     </div>
   </section>`;
@@ -252,7 +252,7 @@ function AdTargeting({ adId, w, v, act }) {
       <h3>2 · Wer soll die Anzeige sehen?</h3>
       <div class="budget"><span>Budget</span><div class="budget-bar"><i style=${`width:${(w.targets.length / v.budget) * 100}%`}></i></div><b>${w.targets.length} / ${v.budget}</b></div>
       <div class="db-table" style=${`--n:${CATEGORIES.length}`}>
-        <div class="db-row head"><span></span><span>ID</span>${CATEGORIES.map((c) => html`<span class=${w.cats.includes(c.id) ? 'sel' : ''} title=${c.name}>${c.icon}</span>`)}<span>Σ</span></div>
+        <div class="db-row head"><span></span><span>ID</span>${CATEGORIES.map((c) => html`<span class=${w.cats.includes(c.id) ? 'sel' : ''} title=${c.name}><${Ic} k=${c} /></span>`)}<span>Σ</span></div>
         ${rows.map((id) => { const on = w.targets.includes(id); const s = score(id); return html`<button class=${`db-row ${on ? 'on' : ''}`} disabled=${w.done || (!on && full)} onClick=${() => act('adTarget', { adId, id })}>
           <span class="check">${on ? '✓' : ''}</span><span class="db-id">#${id}</span>
           ${CATEGORIES.map((c) => { const n = v.db[c.id]?.[id] || 0; return html`<span class=${`cell ${w.cats.includes(c.id) ? 'sel' : ''}`} style=${`--c:${c.color};--k:${Math.min(1, n / 3)}`}>${n || ''}</span>`; })}
@@ -288,7 +288,7 @@ function Empfang({ v, act }) {
   const all = ADS.every((a) => v.ratings[a.id] != null);
   useEffect(() => { if (all) confetti(50); }, [all]);
   return html`<section class="bb-col">
-    <div class="glass pad"><h3>📬 Dein Feed – jetzt mit Werbung</h3><p class="muted small">${rec.length ? `Du hast ${rec.length} Anzeige${rec.length > 1 ? 'n' : ''} bekommen.` : 'Dir wurde keine Anzeige ausgespielt.'} Bewerte ehrlich, ob sie zu dir passen.</p></div>
+    <div class="glass pad"><h3>Dein Feed – jetzt mit Werbung</h3><p class="muted small">${rec.length ? `Du hast ${rec.length} Anzeige${rec.length > 1 ? 'n' : ''} bekommen.` : 'Dir wurde keine Anzeige ausgespielt.'} Bewerte ehrlich, ob sie zu dir passen.</p></div>
     ${rec.map((id) => html`<article class="post card" key=${id}>
       <div class="post-head"><span class="page-av">${AD[id].art[0]}</span><div class="page-meta"><b>${AD[id].brand}</b><span class="sponsored"><b>Gesponsert</b></span></div></div>
       <${AdVisual} ad=${AD[id]} />
@@ -328,7 +328,7 @@ function Profil({ v, act }) {
       <${Radar} series=${[{ values: pr.likesN, color: '#94a3b8', label: 'Nur Likes', dashed: true }, { values: pr.fullN, color: '#0C5D6A', label: 'Likes + Tracking' }]} />
     </div>
     ${st.secretReads.length > 0 && html`<div class="glass pad">
-      <h3>🕵️ Heimlich gelesen – aber nicht geliked</h3>
+      <h3>Heimlich gelesen – aber nicht geliked</h3>
       <div class="secret-list">${st.secretReads.map((x) => html`<div class="secret"><${PostArt} post=${POST[x.id]} small /><div><b>${POST[x.id].headline}</b><small class="muted">${fmtS(x.ms)} angesehen${x.opened ? ' · Artikel geöffnet' : ''}</small></div></div>`)}</div>
     </div>`}
     <div class="glass pad">
@@ -396,7 +396,7 @@ function Wahl({ v, act }) {
       <span class="kicker">Aufgedeckt</span>
       <h3>Die ${PARTY.short} hat ${Object.values(w.counts).filter(Boolean).length} verschiedene Botschaften verschickt!</h3>
       <div class="msg-list">${CATEGORIES.map((c) => html`<div class=${`msg ${c.id === w.cat ? 'mine' : ''}`} style=${`--c:${c.color}`}>
-        <small>${c.icon} an ${c.name}-Fans · ${w.counts[c.id]} Pers.${c.id === w.cat ? ' · DU' : ''}</small><b>${PARTY_MESSAGES[c.id].title}</b><span>${PARTY_MESSAGES[c.id].text}</span></div>`)}</div>
+        <small><${Ic} k=${c} /> an ${c.name}-Fans · ${w.counts[c.id]} Pers.${c.id === w.cat ? ' · DU' : ''}</small><b>${PARTY_MESSAGES[c.id].title}</b><span>${PARTY_MESSAGES[c.id].text}</span></div>`)}</div>
       <div class="contra">${CONTRADICTIONS.map(([a, b, t]) => html`<div class="contra-item">⚡ <b>${CAT[a].name}</b> ↔ <b>${CAT[b].name}</b>: ${t}</div>`)}</div>
     </div>`}
   </section>`;
@@ -618,7 +618,7 @@ function App() {
       <${MailButton} v=${v} act=${act} />
       <${PlayerMenu} v=${v} act=${act} />
     </header>
-    <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} /></nav>
+    <nav class="stories" aria-label="Fortschritt"><${Stepper} phases=${v.phases} phase=${v.phase} compact /></nav>
     <main class="feed-main">
       <${TaskCard} key=${v.phase} phase=${v.phase} settings=${v.settings} />
       <${Phase} v=${v} act=${act} />

@@ -151,12 +151,15 @@ export function AvatarBuilder({ value, onChange }) {
   </div>`;
 }
 
+// Einheitliche Linien-Icons für Kategorien und Schritte (Bootstrap Icons), farbig in der Kategoriefarbe
+export const Ic = ({ k, color = true }) => (k ? html`<i class=${`bi bi-${k.bi} ic`} style=${color && k.color ? `color:${k.color}` : ''} aria-hidden="true"></i>` : null);
+
 export const CatChip = ({ cat, on, onClick, small, count }) => {
   const c = CAT[cat];
   if (!c) return null;
   const Tag = onClick ? 'button' : 'span';
   return html`<${Tag} type=${onClick ? 'button' : undefined} class=${`chip cat ${on ? 'on' : ''} ${small ? 'small' : ''}`} style=${`--c:${c.color}`} onClick=${onClick}>
-    <span class="chip-dot"></span><span>${c.icon} ${c.name}</span>${count != null && html`<b class="chip-count">${count}</b>`}
+    <span><${Ic} k=${c} /> ${c.name}</span>${count != null && html`<b class="chip-count">${count}</b>`}
   </${Tag}>`;
 };
 
@@ -233,19 +236,19 @@ export function Progress({ done, total, label, big }) {
 
 export const phaseTitle = (id) => PHASE[id]?.title || id;
 
-// Phasen-Leiste („Stories“ auf dem Handy, Stepper auf dem Beamer)
-export function Stepper({ phases, phase, progress, onPick }) {
+// Phasen-Leiste: schlanker Segmentbalken (Handy und Beamer). Aktueller Schritt füllt sich mit dem Fortschritt.
+export function Stepper({ phases, phase, progress, compact }) {
   const idx = phases.indexOf(phase);
-  return html`<ol class=${`stepper ${phases.length > 9 ? 'many' : ''}`}>
-    ${phases.map((id, i) => {
+  const next = phases[idx + 1];
+  const pct = progress?.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  return html`<div class=${`track ${compact ? 'compact' : ''}`}>
+    <div class="track-head"><span>Schritt <b>${idx + 1}</b> von ${phases.length}</span>${next && html`<span class="track-next">Als Nächstes: ${PHASE[next].title}</span>`}</div>
+    <ol class="track-bar" aria-label="Fortschritt">${phases.map((id, i) => {
       const st = i < idx ? 'done' : i === idx ? 'now' : 'next';
-      const pct = st === 'now' && progress?.total ? Math.round((progress.done / progress.total) * 100) : st === 'done' ? 100 : 0;
-      const inner = html`<span class="step-icon">${st === 'done' ? '✓' : PHASE[id].icon}</span>
-        <span class="step-text"><small>Schritt ${i + 1}</small><b>${PHASE[id].title}</b></span>
-        <span class="step-bar"><i style=${`width:${pct}%`}></i></span>`;
-      return html`<li class=${`step ${st}`} key=${id} title=${`Schritt ${i + 1}: ${PHASE[id].title}`} aria-label=${`Schritt ${i + 1}: ${PHASE[id].title}${st === 'now' ? ' (aktuell)' : st === 'done' ? ' (erledigt)' : ''}`}>${onPick ? html`<button type="button" onClick=${() => onPick(id)}>${inner}</button>` : inner}</li>`;
-    })}
-  </ol>`;
+      return html`<li class=${st} key=${id} title=${`Schritt ${i + 1}: ${PHASE[id].title}`} aria-label=${`Schritt ${i + 1}: ${PHASE[id].title}${st === 'now' ? ' (aktuell)' : st === 'done' ? ' (erledigt)' : ''}`}>
+        ${st === 'now' && html`<i style=${`width:${Math.max(8, pct)}%`}></i>`}</li>`;
+    })}</ol>
+  </div>`;
 }
 
 // ------------------------------------------------------------------ Diagramme
@@ -261,7 +264,7 @@ export function Radar({ series, size = 280, labels = true }) {
     ${series.map((s) => html`<polygon class=${`radar-area ${s.dashed ? 'dashed' : ''}`} style=${`--c:${s.color}`}
         points=${CATEGORIES.map((c, i) => pt(i, Math.max(0.03, s.values?.[c.id] || 0)).join(',')).join(' ')}><title>${s.label}</title></polygon>`)}
     ${series.map((s) => CATEGORIES.map((c, i) => { const v = s.values?.[c.id] || 0; if (!v) return null; const [x, y] = pt(i, v); return html`<circle class="radar-dot" style=${`--c:${s.color}`} cx=${x} cy=${y} r="4"><title>${`${s.label} · ${c.name}: ${Math.round(v * 100)} %`}</title></circle>`; }))}
-    ${labels && CATEGORIES.map((c, i) => { const [x, y] = pt(i, 1.22); return html`<text class="radar-label" x=${x} y=${y} text-anchor="middle" dominant-baseline="middle"><tspan>${c.icon}</tspan><tspan x=${x} dy="15">${c.name}</tspan></text>`; })}
+    ${labels && CATEGORIES.map((c, i) => { const [x, y] = pt(i, 1.22); return html`<text class="radar-label" x=${x} y=${y} text-anchor="middle" dominant-baseline="middle"><tspan>${c.name}</tspan></text>`; })}
   </svg>`;
 }
 
@@ -275,7 +278,7 @@ export function CatBars({ a, b, aLabel, bLabel }) {
     ${CATEGORIES.map((c) => {
       const pa = a[c.id] / sa, pb = b[c.id] / sb;
       return html`<div class="catbar-row" style=${`--c:${c.color}`}>
-        <span class="catbar-name">${c.icon} ${c.name}</span>
+        <span class="catbar-name"><${Ic} k=${c} /> ${c.name}</span>
         <div class="catbar-tracks">
           <div class="catbar" title=${`${aLabel}: ${Math.round(pa * 100)} %`}><i style=${`width:${(pa / max) * 86}%`}></i><em>${Math.round(pa * 100)} %</em></div>
           <div class="catbar hatch" title=${`${bLabel}: ${Math.round(pb * 100)} %`}><i style=${`width:${(pb / max) * 86}%`}></i><em>${Math.round(pb * 100)} %</em></div>

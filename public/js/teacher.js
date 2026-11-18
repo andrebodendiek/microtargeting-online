@@ -1,6 +1,6 @@
 import {
   html, render, useState, useEffect, useRef, useRoom, Dropdown, SelectMenu, LoginScreen, teacherLogout, store, qs, Logo, Aurora, Avatar, CatChip, GroupBadge,
-  CATEGORIES, CAT, PHASE,
+  CATEGORIES, CAT, PHASE, Ic,
 } from './lib.js';
 
 import { PHASES, ADS } from '/shared/content.js';
@@ -44,7 +44,7 @@ function SettingsDrawer({ v, act, onClose }) {
       <h3 class="cp-sub">Erweiterungen im Ablauf</h3>
       <div class="cp-switches">${OPTIONAL.map((id) => html`<label class="form-check form-switch cp-switch">
         <input class="form-check-input" type="checkbox" role="switch" checked=${v.enabled[id]} onChange=${(e) => act('settings', { enabled: { [id]: e.target.checked } })} />
-        <span>${PHASE[id].icon} ${PHASE[id].title}</span></label>`)}</div>
+        <span><${Ic} k=${PHASE[id]} color=${false} /> ${PHASE[id].title}</span></label>`)}</div>
       <p class="muted small cp-note">Räume werden 30 Tage nach der letzten Änderung automatisch gelöscht. Es werden keine Namen gespeichert.</p>
     </aside>
   </div>`;
@@ -61,7 +61,7 @@ function Sidebar({ v, act }) {
       const pct = st === 'now' && v.progress.total ? Math.round((v.progress.done / v.progress.total) * 100) : 0;
       return html`<li key=${id}><button type="button" class=${`cp-step ${st}`} aria-current=${st === 'now' ? 'step' : undefined} onClick=${() => act('setPhase', { phase: id })}>
         <span class="cp-num">${st === 'done' ? html`<i class="bi bi-check-lg"></i>` : i + 1}</span>
-        <span class="cp-step-text"><b>${p.icon} ${p.title}</b><small>${MODE[p.mode]?.[1] || ''}${p.optional ? ' · Erweiterung' : ''}</small>
+        <span class="cp-step-text"><b>${p.title}</b><small>${MODE[p.mode]?.[1] || ''}${p.optional ? ' · Erweiterung' : ''}</small>
           ${st === 'now' && html`<span class="cp-mini"><i style=${`width:${pct}%`}></i></span>`}</span>
       </button></li>`;
     })}</ol>
@@ -99,7 +99,7 @@ function NowCard({ v, act, sock, copy }) {
   const pct = v.progress.total ? Math.round((v.progress.done / v.progress.total) * 100) : 0;
   return html`<section class="card cp-now">
     <div class="cp-now-top">
-      <span class="cp-now-icon">${p.icon}</span>
+      <span class="cp-now-icon"><${Ic} k=${p} color=${false} /></span>
       <div class="cp-now-title"><small>Schritt ${idx + 1} von ${v.phases.length} · <i class=${`bi bi-${MODE[p.mode]?.[0]}`}></i> ${MODE[p.mode]?.[1]}</small><h1>${p.title}</h1></div>
       <div class="cp-now-nav">
         <button class="btn" disabled=${idx <= 0} onClick=${() => go(-1)} title="Vorheriger Schritt (←)"><i class="bi bi-arrow-left"></i></button>
@@ -142,7 +142,7 @@ function Players({ v, act }) {
         <td><div class="cp-who"><${Avatar} id=${p.id} avatar=${p.avatar} size=${32} online=${p.online} />${p.email && html`<small class="muted" title=${p.email}>${p.email.replace(/@.*/, '')}</small>`}</div></td>
         ${groups.length > 0 && html`<td class="cp-group"><${SelectMenu} size="sm" value=${p.group || ''} ariaLabel=${`Gruppe von ID ${p.id}`} onChange=${(g) => act('setGroup', { id: p.id, group: g })} options=${groups.map((g) => ({ value: g.id, label: g.id, hint: g.cats.map((c) => CAT[c].name).join(', ') }))} /></td>`}
         <td class="small">${stat(p)}</td>
-        <td class="small">${p.topLikes ? CAT[p.topLikes].icon : '·'} → ${p.topFull ? CAT[p.topFull].icon : '·'} ${p.topHidden && p.topHidden !== p.topLikes ? html`<span class="status-pill warn" title="Tracking zeigt anderes Interesse">🕵️ ${CAT[p.topHidden].icon}</span>` : ''}</td>
+        <td class="small">${p.topLikes ? html`<${Ic} k=${CAT[p.topLikes]} />` : '·'} → ${p.topFull ? html`<${Ic} k=${CAT[p.topFull]} />` : '·'} ${p.topHidden && p.topHidden !== p.topLikes ? html`<span class="status-pill warn" title="Tracking zeigt anderes Interesse"><i class="bi bi-incognito"></i> <${Ic} k=${CAT[p.topHidden]} /></span>` : ''}</td>
         <td class="small num text-end">${p.dataPoints ?? '–'}</td>
         <td class="text-end"><${Dropdown} btnClass="icon-btn" icon="three-dots-vertical" caret=${false} title=${`Aktionen für ID ${p.id}`} items=${[
           { header: `ID ${p.id}${p.email ? ` · ${p.email}` : ''} · ${p.online ? 'online' : 'offline'}` },
@@ -151,7 +151,7 @@ function Players({ v, act }) {
         ]} /></td>
       </tr>`)}</tbody>
     </table></div>`}
-    ${groups.length > 0 && html`<div class="cp-groups">${groups.map((g) => html`<span class="cp-gitem"><${GroupBadge} gid=${g.id} /> ${g.cats.map((c) => CAT[c].icon).join(' ')} <small class="muted">${g.members.length}</small></span>`)}</div>`}
+    ${groups.length > 0 && html`<div class="cp-groups">${groups.map((g) => html`<span class="cp-gitem"><${GroupBadge} gid=${g.id} /> ${g.cats.map((c) => html`<${Ic} k=${CAT[c]} />`)} <small class="muted">${g.members.length}</small></span>`)}</div>`}
   </section>`;
 }
 
@@ -232,7 +232,7 @@ function App() {
     <div class="cp-layout">
       <${Sidebar} v=${v} act=${act} />
       <main class="cp-main">
-        <div class="cp-mobile-steps"><${SelectMenu} value=${v.phase} ariaLabel="Schritt wählen" onChange=${(ph) => act('setPhase', { phase: ph })} options=${v.phases.map((id, i) => ({ value: id, label: `${i + 1}. ${PHASE[id].title}`, emoji: i < idx ? '✅' : PHASE[id].icon }))} /></div>
+        <div class="cp-mobile-steps"><${SelectMenu} value=${v.phase} ariaLabel="Schritt wählen" onChange=${(ph) => act('setPhase', { phase: ph })} options=${v.phases.map((id, i) => ({ value: id, label: `${i + 1}. ${PHASE[id].title}`, icon: i < idx ? 'check-circle' : PHASE[id].bi }))} /></div>
         <${NowCard} v=${v} act=${act} sock=${sock} copy=${copy} />
         <div class="cp-grid">
           <${Players} v=${v} act=${act} />

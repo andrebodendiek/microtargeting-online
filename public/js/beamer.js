@@ -1,5 +1,5 @@
 import {
-  AvatarInSvg, html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
+  AvatarInSvg, Ic, html, render, useState, useEffect, useRef, useMemo, useRoom, Dropdown, LoginScreen, qs, Logo, Aurora, Avatar, CatChip, GroupBadge, groupColor,
   PostArt, AdVisual, CountUp, Radar, CatBars, Stepper, Progress, confetti, CATEGORIES, CAT, POST, AD, PHASE,
 } from './lib.js';
 import { ADS, ROUND1, PARTY, PARTY_MESSAGES, CONTRADICTIONS, REFLECTION_QUESTIONS } from '/shared/content.js';
@@ -21,7 +21,7 @@ function JoinBox({ big }) {
 function TaskPanel({ v }) {
   const p = PHASE[v.phase];
   return html`<aside class="task-panel glass">
-    <span class="mode">${p.mode === 'GA' ? '👥 Gruppenarbeit' : p.mode === 'EA' ? '👤 Einzelarbeit' : '🗣️ Plenum'}</span>
+    <span class="mode"><${Ic} k=${p} color=${false} /> ${p.mode === 'GA' ? 'Gruppenarbeit' : p.mode === 'EA' ? 'Einzelarbeit' : 'Plenum'}</span>
     <ol>${p.task.map((t) => html`<li>${t.replace('{maxLikes}', v.settings.maxLikes)}</li>`)}</ol>
     <${Progress} big done=${v.progress.done} total=${v.progress.total} label=${v.progress.label} />
   </aside>`;
@@ -61,7 +61,7 @@ function Feed({ v }) {
       <div class="rings">${v.players.map((p) => html`<${LikeRing} key=${p.id} p=${p} max=${v.settings.maxLikes} />`)}</div>
     </div>
     <div class="glass stage-card">
-      <div class="card-head"><h3>🔥 Trending auf bubbl</h3></div>
+      <div class="card-head"><h3>Trending auf bubbl</h3></div>
       <div class="trending">${ranking.map(({ post, n }, i) => html`<div class="trend" key=${post.id}>
         <span class="trend-rank">${i + 1}</span><${PostArt} post=${post} small />
         <div class="trend-body"><b>${post.headline}</b><div class="trend-bar"><i style=${`width:${(n / top) * 100}%`}></i></div></div>
@@ -78,11 +78,11 @@ function Heatmap({ v, db, tops }) {
   return html`<div class="heatmap" style=${`--cols:${ids.length}`}>
     <div class="hm-row head"><span class="hm-corner">Kategorie ↓ · ID →</span>${ids.map((id) => html`<span class="hm-id">${id}</span>`)}</div>
     ${CATEGORIES.map((c) => html`<div class="hm-row" style=${`--c:${c.color}`}>
-      <span class="hm-cat"><span>${c.icon} ${c.name}</span></span>
+      <span class="hm-cat"><span><${Ic} k=${c} /> ${c.name}</span></span>
       ${ids.map((id) => { const n = db[c.id]?.[id] || 0; const top = tops && tops[id] === c.id;
         return html`<span class=${`hm-cell ${n ? 'has' : ''} ${top ? 'top' : ''}`} style=${`--k:${n / maxN}`} title=${`ID ${id} · ${c.name}: ${n}`} key=${`${c.id}-${id}-${n}`}>${n || ''}</span>`; })}
     </div>`)}
-    ${tops && html`<div class="hm-row foot"><span class="hm-cat"><b>Hauptinteresse</b></span>${ids.map((id) => html`<span class="hm-top">${tops[id] ? CAT[tops[id]].icon : '·'}</span>`)}</div>`}
+    ${tops && html`<div class="hm-row foot"><span class="hm-cat"><b>Hauptinteresse</b></span>${ids.map((id) => html`<span class="hm-top">${tops[id] ? html`<${Ic} k=${CAT[tops[id]]} />` : '·'}</span>`)}</div>`}
   </div>`;
 }
 
@@ -115,22 +115,22 @@ function Auswertung({ v }) {
   return html`<div class="stack">
     <div class="split db-split">
       <div class="glass stage-card">
-        <div class="card-head"><h3>❤️ Rohdaten</h3><span class="metric"><b><${CountUp} value=${shown} /></b> / ${events.length} Likes</span></div>
+        <div class="card-head"><h3>Rohdaten</h3><span class="metric"><b><${CountUp} value=${shown} /></b> / ${events.length} Likes</span></div>
         <p class="muted db-note">Jeder Like wird gespeichert: <b>wer</b> (ID) hat <b>was</b> (Beitrag) geliked – der Beitrag gehört zu einer Kategorie.</p>
         <div class="event-log">${recent.map(([id, postId], i) => { const post = POST[postId]; return html`<div class=${`ev ${i === 0 ? 'new' : ''}`} key=${`${id}-${postId}`}>
-          <b class="ev-id">#${id}</b><span class="ev-like">❤️</span><span class="ev-post">„${shortHead(post?.headline || postId)}“</span><span class="ev-arrow">→</span><span class="ev-cat" style=${`--c:${CAT[post?.cat]?.color}`}>${CAT[post?.cat]?.icon} ${CAT[post?.cat]?.name}</span>
+          <b class="ev-id">#${id}</b><span class="ev-like">❤️</span><span class="ev-post">„${shortHead(post?.headline || postId)}“</span><span class="ev-arrow">→</span><span class="ev-cat" style=${`--c:${CAT[post?.cat]?.color}`}>${CAT[post?.cat]?.name}</span>
         </div>`; })}
         ${!events.length && html`<p class="muted">Noch keine Likes vorhanden.</p>`}</div>
       </div>
       <div class="glass stage-card grow">
-        <div class="card-head"><h3>📊 Datenbank: Likes je Person und Kategorie</h3><span class="muted">${done ? `fertig · ${v.players.length * CATEGORIES.length} Felder` : 'entsteht automatisch …'}</span></div>
+        <div class="card-head"><h3>Datenbank: Likes je Person und Kategorie</h3><span class="muted">${done ? `fertig · ${v.players.length * CATEGORIES.length} Felder` : 'entsteht automatisch …'}</span></div>
         <${Heatmap} v=${v} db=${db} tops=${tops} />
       </div>
     </div>
     ${done && html`<div class="questions-strip">
-      <div class="glass q-card"><span>🤔</span><b>Was weiß bubbl jetzt über jede/n von euch?</b></div>
-      <div class="glass q-card"><span>🎯</span><b>Wer sollte Werbung für Laufschuhe bekommen – und wer nicht?</b></div>
-      <div class="glass q-card"><span>🕵️</span><b>Was fehlt in der Tabelle? Tipp: alles, was ihr <u>nicht</u> geliked habt …</b></div>
+      <div class="glass q-card"><i class="bi bi-question-circle"></i><b>Was weiß bubbl jetzt über jede/n von euch?</b></div>
+      <div class="glass q-card"><i class="bi bi-bullseye"></i><b>Wer sollte Werbung für Laufschuhe bekommen – und wer nicht?</b></div>
+      <div class="glass q-card"><i class="bi bi-incognito"></i><b>Was fehlt in der Tabelle? Tipp: alles, was ihr <u>nicht</u> geliked habt …</b></div>
     </div>`}
   </div>`;
 }
@@ -166,7 +166,7 @@ function TargetGraph({ v, targets }) {
 
 function Werbung({ v }) {
   return html`<div class="split wide-left">
-    <div class="glass stage-card"><div class="card-head"><h3>🎯 Wer bekommt welche Werbung?</h3><span class="metric">Budget: <b>${v.budget}</b> Kontakte je Anzeige</span></div>
+    <div class="glass stage-card"><div class="card-head"><h3>Wer bekommt welche Werbung?</h3><span class="metric">Budget: <b>${v.budget}</b> Kontakte je Anzeige</span></div>
       <${TargetGraph} v=${v} targets=${v.human || {}} />
     </div>
     <div class="glass stage-card">
@@ -263,7 +263,7 @@ function BubbleMap({ v }) {
   };
   return html`<svg class="bubblemap" viewBox=${`0 0 ${W} ${H}`} role="img" aria-label="Filterblasen-Karte">
     <circle class="center-zone" cx=${cx} cy=${cy} r="90" /><text class="center-label" x=${cx} y=${cy + 115} text-anchor="middle">vielfältig</text>
-    ${CATEGORIES.map((c) => { const [x, y] = hubs[c.id]; return html`<g class="hub" transform=${`translate(${x},${y})`} style=${`--c:${c.color}`}><circle r="62" /><text y="-4" class="hub-icon">${c.icon}</text><text y="24" class="hub-name">${c.name}</text></g>`; })}
+    ${CATEGORIES.map((c) => { const [x, y] = hubs[c.id]; return html`<g class="hub" transform=${`translate(${x},${y})`} style=${`--c:${c.color}`}><circle r="62" /><text y="8" class="hub-name">${c.name}</text></g>`; })}
     ${v.players.map((p, i) => { const [x, y] = place(p, i); const idx = p.bubbleIndex ?? 1;
       return html`<g class="bnode" key=${p.id} style=${`transform:translate(${x}px,${y}px)`}><circle r="20" class=${idx < 0.4 ? 'deep' : ''} /><${AvatarInSvg} avatar=${p.avatar} r=${18} /></g>`; })}
   </svg>`;
@@ -274,7 +274,7 @@ function Blase({ v }) {
   const avg = idx.length ? idx.reduce((a, b) => a + b, 0) / idx.length : 1;
   const deep = v.players.filter((p) => p.bubbleLen && p.bubbleIndex < 0.4).length;
   return html`<div class="split wide-left">
-    <div class="glass stage-card"><div class="card-head"><h3>🫧 Wer steckt in welcher Blase?</h3><span class="muted">Je näher an einem Thema, desto einseitiger der Feed</span></div><${BubbleMap} v=${v} /></div>
+    <div class="glass stage-card"><div class="card-head"><h3>Wer steckt in welcher Blase?</h3><span class="muted">Je näher an einem Thema, desto einseitiger der Feed</span></div><${BubbleMap} v=${v} /></div>
     <div class="bb-col">
       <div class="glass stage-card center">
         <small class="muted">Durchschnittliche Feed-Vielfalt</small>
@@ -304,7 +304,7 @@ function Wahl({ v }) {
     </div>`;
   }
   const card = (c) => { const s = w.byCat[c]; return html`<div class="pmsg glass" style=${`--c:${CAT[c].color}`}>
-    <small>${CAT[c].icon} an ${CAT[c].name}-Fans · ${s.n} Pers.</small><b>${PARTY_MESSAGES[c].title}</b><span>${PARTY_MESSAGES[c].text}</span>
+    <small><${Ic} k=${CAT[c]} /> an ${CAT[c].name}-Fans · ${s.n} Pers.</small><b>${PARTY_MESSAGES[c].title}</b><span>${PARTY_MESSAGES[c].text}</span>
     <em>Sympathie: ${s.n ? (s.sum / s.n).toFixed(1).replace('.', ',') : '–'}</em></div>`; };
   return html`<div class="stack">
     <div class="contra-grid">
@@ -339,7 +339,7 @@ export function BeamerStage({ v }) {
   return html`<div class="beamer">
     <header class="b-top">
       <${Logo} size=${34} sub="Microtargeting-Labor" />
-      <div class="b-title"><span class="b-icon">${PHASE[v.phase].icon}</span><h1>${PHASE[v.phase].title}</h1></div>
+      <div class="b-title"><h1>${PHASE[v.phase].title}</h1></div>
       ${v.phase !== 'lobby' ? html`<${JoinBox} />` : html`<span></span>`}
     </header>
     <${Stepper} phases=${v.phases} phase=${v.phase} progress=${v.progress} />

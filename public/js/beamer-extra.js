@@ -1,5 +1,5 @@
 // Beamer-Ansichten: Algorithmus-Werkbank, Fairness-Check, Live-Quiz
-import { html, useEffect, useRef, Avatar, GroupBadge, groupColor, AdVisual, CountUp, confetti, CATEGORIES, CAT, AD } from './lib.js';
+import { html, useEffect, useRef, Avatar, GroupBadge, groupColor, AdVisual, CountUp, confetti, Ic, CATEGORIES, CAT, AD } from './lib.js';
 import { FAIRNESS } from '/shared/content.js';
 import { useCountdown } from './play-extra.js';
 
@@ -17,7 +17,7 @@ export function WerkbankStage({ v }) {
   const base = wb.baselines;
   return html`<div class="split wide-left">
     <div class="glass stage-card">
-      <div class="card-head"><h3>🛠️ Bestenliste der Algorithmen</h3><span class="muted">Gesamtwert F1 · Trainingsdaten: ${wb.split.train.map((id) => AD[id]?.label).join(', ')}</span></div>
+      <div class="card-head"><h3>Bestenliste der Algorithmen</h3><span class="muted">Gesamtwert F1 · Trainingsdaten: ${wb.split.train.map((id) => AD[id]?.label).join(', ')}</span></div>
       ${wb.test && html`<div class="legend"><span class="lg solid" style="--lc:#0C5D6A">Trainingsdaten</span><span class="lg solid" style="--lc:#0ea5e9">Testdaten (${wb.split.test.map((id) => AD[id]?.label).join(', ')})</span></div>`}
       <div class="wb-rows">
         ${rows.map((g, i) => html`<div class="wb-row" key=${g.id}>
@@ -52,7 +52,7 @@ export function FairnessStage({ v }) {
   return html`<div class="stack">
     <div class="split">
       <div class="glass stage-card">
-        <div class="card-head"><h3>⚖️ Wer hat das Angebot gesehen?</h3><span class=${`status-pill ${f.rule ? 'ok' : 'warn'}`}>Fairness-Regel ${f.rule ? 'AN' : 'AUS'}</span></div>
+        <div class="card-head"><h3>Wer hat das Angebot gesehen?</h3><span class=${`status-pill ${f.rule ? 'ok' : 'warn'}`}>Fairness-Regel ${f.rule ? 'AN' : 'AUS'}</span></div>
         <div class="fair-ad"><${AdVisual} ad=${FAIRNESS.ad} compact /></div>
         <div class="fair-matrix">
           <span></span><b>gesehen</b><b>nicht gesehen</b>
@@ -63,7 +63,7 @@ export function FairnessStage({ v }) {
       <div class="glass stage-card">
         <div class="card-head"><h3>Anteil, der die Anzeige sah – nach Hauptinteresse</h3></div>
         <div class="fair-bars">${cats.map((id) => { const b = f.byCat[id]; const share = b.n ? b.saw / b.n : 0; return html`<div class="fb-row" style=${`--c:${CAT[id].color}`}>
-          <span>${CAT[id].icon} ${CAT[id].name}</span><div class="fb"><i style=${`width:${share * 100}%`}></i></div><em>${b.saw}/${b.n}${b.excluded ? ` · ${b.excluded} ausgeschl.` : ''}</em></div>`; })}</div>
+          <span><${Ic} k=${CAT[id]} /> ${CAT[id].name}</span><div class="fb"><i style=${`width:${share * 100}%`}></i></div><em>${b.saw}/${b.n}${b.excluded ? ` · ${b.excluded} ausgeschl.` : ''}</em></div>`; })}</div>
         <div class="fair-vote"><span>Ist das fair? (${votes} Stimmen)</span>
           <div class="im-bar"><i class="yes" style=${`flex:${f.fairYes || 0.001}`}>⚖️ fair ${f.fairYes}</i><i class="no" style=${`flex:${f.fairNo || 0.001}`}>🚩 unfair ${f.fairNo}</i></div></div>
       </div>
@@ -81,13 +81,13 @@ export function QuizStage({ v }) {
   useEffect(() => { if (ended && !fired.current) { fired.current = true; confetti(160); } }, [ended]);
   if (!q) return null;
   const board = html`<div class="glass stage-card quiz-board">
-    <div class="card-head"><h3>🏅 Bestenliste</h3></div>
+    <div class="card-head"><h3>Bestenliste</h3></div>
     ${q.leaderboard.map((p, i) => html`<div class="lb-row" key=${p.id}><span class="lb-rank">${i + 1}</span><${Avatar} id=${p.id} avatar=${p.avatar} size=${46} /><b><${CountUp} value=${p.score} /></b></div>`)}
   </div>`;
   if (q.idx < 0) return html`<div class="split wide-left"><div class="glass stage-card center quiz-title"><span class="quiz-trophy">🏆</span><h2>Live-Quiz</h2><p>${q.total} Fragen · ${q.seconds} Sekunden pro Frage · schnelle richtige Antworten bringen mehr Punkte</p></div>${board}</div>`;
   if (ended) {
     const top = q.leaderboard.slice(0, 3);
-    return html`<div class="split wide-left"><div class="glass stage-card center podium-card"><h2>🎉 Siegerehrung</h2>
+    return html`<div class="split wide-left"><div class="glass stage-card center podium-card"><h2>Siegerehrung</h2>
       <div class="podium">${[1, 0, 2].map((i) => top[i] && html`<div class=${`pod p${i + 1}`}><${Avatar} id=${top[i].id} avatar=${top[i].avatar} size=${i === 0 ? 96 : 72} /><b>${top[i].score.toLocaleString('de-DE')}</b><div class="pod-block">${i + 1}</div></div>`)}</div>
     </div>${board}</div>`;
   }

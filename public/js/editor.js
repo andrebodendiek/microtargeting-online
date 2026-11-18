@@ -103,11 +103,11 @@ function PostsTab({ c, set }) {
     ${list.map((p) => html`<div class=${`ed-item ${open === p.id ? 'open' : ''}`} key=${p.id}>
       <button class="ed-head" onClick=${() => setOpen(open === p.id ? null : p.id)}>
         <span class="ed-thumb"><${PostArt} post=${p} small /></span>
-        <span class="ed-title"><b>${p.headline}</b><small class="muted">${CAT[p.cat]?.icon} ${CAT[p.cat]?.name} · Runde ${p.round} · ${PAGES[p.page]?.name}</small></span>
+        <span class="ed-title"><b>${p.headline}</b><small class="muted">${CAT[p.cat]?.name} · Runde ${p.round} · ${PAGES[p.page]?.name}</small></span>
       </button>
       ${open === p.id && html`<div class="ed-form">
         <div class="ed-grid">
-          <${Field} label="Kategorie"><${Select} value=${p.cat} onInput=${(v) => upd(p.id, { cat: v })} options=${CATEGORIES.map((x) => [x.id, `${x.icon} ${x.name}`])} /><//>
+          <${Field} label="Kategorie"><${Select} value=${p.cat} onInput=${(v) => upd(p.id, { cat: v })} options=${CATEGORIES.map((x) => [x.id, x.name])} /><//>
           <${Field} label="Seite"><${Select} value=${p.page} onInput=${(v) => upd(p.id, { page: v })} options=${Object.entries(PAGES).map(([k, pg]) => [k, `${pg.avatar} ${pg.name}`])} /><//>
           <${Field} label="Runde"><${Select} value=${String(p.round)} onInput=${(v) => upd(p.id, { round: Number(v) })} options=${[['1', '1 – Likes verteilen'], ['2', '2 – nur Filterblase']]} /><//>
           <${Field} label="Zeitangabe"><${Text} value=${p.time} max=${14} onInput=${(v) => upd(p.id, { time: v })} /><//>
@@ -152,7 +152,7 @@ function AdsTab({ c, set }) {
       <div class="ed-head-row">
         <button class="ed-head" onClick=${() => setOpen(open === a.id ? null : a.id)}>
           <span class="ed-thumb ad" style=${`background:linear-gradient(135deg,${a.bg[0]},${a.bg[1]})`}>${a.art[0]}</span>
-          <span class="ed-title"><b>${i + 1}. ${a.label} – ${a.product}</b><small class="muted">${a.cats.map((x) => `${CAT[x]?.icon} ${CAT[x]?.name}`).join(' + ')} · ${i < 4 ? 'Training' : 'Test'}</small></span>
+          <span class="ed-title"><b>${i + 1}. ${a.label} – ${a.product}</b><small class="muted">${a.cats.map((x) => `${CAT[x]?.name}`).join(' + ')} · ${i < 4 ? 'Training' : 'Test'}</small></span>
         </button>
         <span class="ed-move"><button class="icon-btn" onClick=${() => set({ ...c, ads: move(c.ads, i, -1) })}>↑</button><button class="icon-btn" onClick=${() => set({ ...c, ads: move(c.ads, i, 1) })}>↓</button></span>
       </div>
@@ -173,7 +173,7 @@ function PartyTab({ c, set }) {
     </div>
     <p class="muted small">Jede Interessengruppe bekommt ihre eigene Botschaft. Widerspruchspaare: ${c.contradictions.map(([a, b]) => `${CAT[a]?.name} ↔ ${CAT[b]?.name}`).join(', ')}.</p>
     ${CATEGORIES.map((x) => { const m = c.partyMessages[x.id] || {}; return html`<div class="ed-item open" style=${`border-left:4px solid ${x.color}`}>
-      <div class="ed-form"><b>${x.icon} an ${x.name}-Fans</b>
+      <div class="ed-form"><b>An ${x.name}-Fans</b>
         <div class="ed-grid"><${Field} label="Titel"><${Text} value=${m.title} max=${70} onInput=${(v) => updMsg(x.id, { title: v })} /><//><${Field} label="Bild (Emoji)"><${Text} value=${m.art} max=${16} onInput=${(v) => updMsg(x.id, { art: v })} /><//></div>
         <${Field} label="Text"><${Text} area value=${m.text} max=${240} onInput=${(v) => updMsg(x.id, { text: v })} /><//>
       </div></div>`; })}
@@ -227,8 +227,8 @@ function targetLabel(it, c) {
   return null;
 }
 function ItemPreview({ it }) {
-  if (it.post) return html`<div class="sug-prev"><${PostArt} post=${it.post} small /><div><b>${it.post.headline}</b><small>${CAT[it.post.cat]?.icon} ${CAT[it.post.cat]?.name} · Runde ${it.post.round}</small><p>${it.post.teaser}</p></div></div>`;
-  if (it.ad) return html`<div class="sug-ad"><${AdVisual} ad=${it.ad} compact /><small>${it.ad.cats.map((x) => `${CAT[x]?.icon} ${CAT[x]?.name}`).join(' + ')}</small></div>`;
+  if (it.post) return html`<div class="sug-prev"><${PostArt} post=${it.post} small /><div><b>${it.post.headline}</b><small>${CAT[it.post.cat]?.name} · Runde ${it.post.round}</small><p>${it.post.teaser}</p></div></div>`;
+  if (it.ad) return html`<div class="sug-ad"><${AdVisual} ad=${it.ad} compact /><small>${it.ad.cats.map((x) => `${CAT[x]?.name}`).join(' + ')}</small></div>`;
   if (it.quiz) return html`<div class="sug-quiz"><b>${it.quiz.q}</b><ol>${it.quiz.options.map((o, i) => html`<li class=${i === it.quiz.correct ? 'right' : ''}>${o}</li>`)}</ol></div>`;
   if (it.party_message) return html`<div class="sug-quiz"><b>${it.party_message.art} ${it.party_message.title}</b><p>${it.party_message.text}</p></div>`;
   return null;

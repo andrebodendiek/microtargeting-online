@@ -7,13 +7,13 @@ import { IMAGES } from './images.js';
 
 // Reihenfolge = feste Farbreihenfolge (Kategorie-Farben werden nie neu verteilt).
 export const CATEGORIES = [
-  { id: 'technik', name: 'Technik', icon: '🎮', color: '#3987e5', light: '#2a78d6' },
-  { id: 'sport', name: 'Sport', icon: '⚽', color: '#d95926', light: '#eb6834' },
-  { id: 'umwelt', name: 'Umweltschutz', icon: '🌍', color: '#199e70', light: '#1baf7a' },
-  { id: 'naschen', name: 'Naschen', icon: '🍫', color: '#c98500', light: '#b07600' },
-  { id: 'mode', name: 'Mode', icon: '👗', color: '#d55181', light: '#d5508a' },
-  { id: 'natur', name: 'Natur', icon: '🌲', color: '#0ca30c', light: '#008300' },
-  { id: 'ernaehrung', name: 'Ernährung', icon: '🥗', color: '#9085e9', light: '#6250d6' },
+  { id: 'technik', name: 'Technik', icon: '🎮', bi: 'controller', color: '#3987e5', light: '#2a78d6' },
+  { id: 'sport', name: 'Sport', icon: '⚽', bi: 'bicycle', color: '#d95926', light: '#eb6834' },
+  { id: 'umwelt', name: 'Umweltschutz', icon: '🌍', bi: 'globe-europe-africa', color: '#199e70', light: '#1baf7a' },
+  { id: 'naschen', name: 'Naschen', icon: '🍫', bi: 'cake2', color: '#c98500', light: '#b07600' },
+  { id: 'mode', name: 'Mode', icon: '👗', bi: 'bag', color: '#d55181', light: '#d5508a' },
+  { id: 'natur', name: 'Natur', icon: '🌲', bi: 'tree', color: '#0ca30c', light: '#008300' },
+  { id: 'ernaehrung', name: 'Ernährung', icon: '🥗', bi: 'egg-fried', color: '#9085e9', light: '#6250d6' },
 ];
 const dict = (entries) => Object.assign(Object.create(null), Object.fromEntries(entries));
 export const CAT = dict(CATEGORIES.map((c) => [c.id, c]));
@@ -374,29 +374,29 @@ applyContent(DEFAULT_CONTENT);
 
 // Phasen des Spiels. optional = kann von der Lehrkraft abgeschaltet werden.
 export const PHASES = [
-  { id: 'lobby', title: 'Anmelden', icon: '👋', optional: false, mode: 'EA',
+  { id: 'lobby', title: 'Anmelden', icon: '👋', bi: 'person-plus', optional: false, mode: 'EA',
     task: ['Scanne den QR-Code oder gib den Raumcode ein.', 'Erstelle ein Konto mit einer ausgedachten E-Mail-Adresse und baue dein Profilbild.', 'Merke dir deine Nutzer-ID!'] },
-  { id: 'feed', title: 'Likes verteilen', icon: '❤️', optional: false, mode: 'EA',
+  { id: 'feed', title: 'Likes verteilen', icon: '❤️', bi: 'heart', optional: false, mode: 'EA',
     task: ['Scrolle durch deinen bubbl-Feed.', 'Like die Beiträge, die dich wirklich interessieren.', 'Du hast höchstens {maxLikes} Likes.'] },
-  { id: 'auswertung', title: 'Datenbank entsteht', icon: '📊', optional: false, mode: 'Plenum',
+  { id: 'auswertung', title: 'Datenbank entsteht', icon: '📊', bi: 'database', optional: false, mode: 'Plenum',
     task: ['Schaut auf den Beamer: Aus jedem einzelnen Like wird automatisch ein Eintrag in einer Datenbank.', 'Auf deinem Handy siehst du deine eigene Zeile – so „sieht“ bubbl dich.', 'Überlegt gemeinsam: Was kann ein Werbekunde mit dieser Tabelle anfangen?'] },
-  { id: 'werbung', title: 'Werbung platzieren', icon: '🎯', optional: false, mode: 'GA',
+  { id: 'werbung', title: 'Werbung platzieren', icon: '🎯', bi: 'bullseye', optional: false, mode: 'GA',
     task: ['Seht euch eure Werbeanzeige an: Zu welchen Kategorien passt sie?', 'Wählt mit Hilfe der Datenbank die IDs aus, die die Anzeige sehen sollen.', 'Achtung: Euer Werbebudget ist begrenzt!'] },
-  { id: 'empfang', title: 'Werbung erhalten', icon: '📬', optional: false, mode: 'EA',
+  { id: 'empfang', title: 'Werbung erhalten', icon: '📬', bi: 'envelope-open', optional: false, mode: 'EA',
     task: ['Sieh dir die Werbung an, die du bekommen hast.', 'Bewerte jede Anzeige: Passt sie zu dir?', 'Bewerte auch die Anzeigen, die du nicht bekommen hast.'] },
-  { id: 'werkbank', title: 'Algorithmus-Werkbank', icon: '🛠️', optional: true, mode: 'GA',
+  { id: 'werkbank', title: 'Algorithmus-Werkbank', icon: '🛠️', bi: 'sliders', optional: true, mode: 'GA',
     task: ['Baut euren eigenen Targeting-Algorithmus: Wie stark zählt welches Signal?', 'Beobachtet live Trefferquote und Reichweite – geprüft an euren echten Bewertungen.', 'Schlagt den bubbl-Algorithmus! Aber Vorsicht vor Überanpassung.'] },
-  { id: 'profil', title: 'Dein Datenprofil', icon: '🕵️', optional: false, mode: 'EA',
+  { id: 'profil', title: 'Dein Datenprofil', icon: '🕵️', bi: 'incognito', optional: false, mode: 'EA',
     task: ['Sieh dir an, was bubbl über dich weiß.', 'Prüfe die Vermutungen: Stimmen sie?', 'Was hat bubbl gemessen, ohne dass du es gemerkt hast?'] },
-  { id: 'fairness', title: 'Fairness-Check', icon: '⚖️', optional: true, mode: 'EA',
+  { id: 'fairness', title: 'Fairness-Check', icon: '⚖️', bi: 'shield-check', optional: true, mode: 'EA',
     task: ['Ein Angebot wurde vom Algorithmus ausgespielt – hast du es gesehen?', 'Sag ehrlich, ob es dich interessiert hätte.', 'Ist diese Auswahl fair?'] },
-  { id: 'blase', title: 'Filterblase', icon: '🫧', optional: true, mode: 'EA',
+  { id: 'blase', title: 'Filterblase', icon: '🫧', bi: 'funnel', optional: true, mode: 'EA',
     task: ['Dein Feed passt sich jetzt an dich an.', 'Like weiter, was dich interessiert, und lade mehr Beiträge.', 'Beobachte: Wie verändert sich dein Feed?'] },
-  { id: 'wahl', title: 'Wahlwerbung', icon: '🗳️', optional: true, mode: 'EA',
+  { id: 'wahl', title: 'Wahlwerbung', icon: '🗳️', bi: 'megaphone', optional: true, mode: 'EA',
     task: ['Die „Partei für Morgen“ hat dir eine Botschaft geschickt.', 'Wie sympathisch findest du die Partei?', 'Vergleicht danach: Haben alle dieselbe Botschaft bekommen?'] },
-  { id: 'reflexion', title: 'Reflexion', icon: '💭', optional: false, mode: 'Plenum',
+  { id: 'reflexion', title: 'Reflexion', icon: '💭', bi: 'chat-quote', optional: false, mode: 'Plenum',
     task: ['Nimm Stellung zu personalisierter Werbung („Microtargeting“).', 'Was sind Vor- und Nachteile?', 'Wo könnten Schwierigkeiten auftreten?'] },
-  { id: 'quiz', title: 'Live-Quiz', icon: '🏆', optional: true, mode: 'EA',
+  { id: 'quiz', title: 'Live-Quiz', icon: '🏆', bi: 'trophy', optional: true, mode: 'EA',
     task: ['Beantworte die Fragen auf deinem Handy.', 'Schnelle richtige Antworten bringen mehr Punkte.', 'Die Auflösung erscheint auf dem Beamer.'] },
 ];
 export const PHASE = Object.fromEntries(PHASES.map((p) => [p.id, p]));

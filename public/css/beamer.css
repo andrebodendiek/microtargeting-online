@@ -6,11 +6,6 @@ body { overflow: hidden; }
 .b-top > :last-child { justify-self: end; }
 .b-title { display: flex; align-items: center; gap: 0.9rem; }
 .b-title h1 { font-size: 2.9rem; font-weight: 800; letter-spacing: -0.035em; }
-.b-icon { font-size: 2.6rem; width: 4.2rem; height: 4.2rem; border-radius: 1.3rem; display: grid; place-items: center; background: var(--brand); box-shadow: var(--glow); }
-.beamer .stepper .step { padding: 0.65rem 0.8rem 0.8rem; }
-.beamer .step-icon { width: 2.4rem; height: 2.4rem; font-size: 1.2rem; }
-.beamer .step-text b { font-size: 0.98rem; white-space: normal; line-height: 1.12; }
-.beamer .step-text small { font-size: 0.72rem; }
 
 .joinbox { border: 1px solid var(--line); display: flex; align-items: center; gap: 0.8rem; background: #fff; color: #0b0b1a; padding: 0.45rem 1rem 0.45rem 0.45rem; border-radius: 1.1rem; box-shadow: var(--shadow); }
 .joinbox img { width: 4.4rem; height: 4.4rem; border-radius: 0.6rem; }
@@ -278,11 +273,6 @@ body { overflow: hidden; }
 .pod.p2 { animation-delay: 0.3s; } .pod.p3 { animation-delay: 0.6s; }
 
 /* Viele Schritte: kompakter Stepper */
-.beamer .stepper.many { gap: 6px; }
-.beamer .stepper.many .step { padding: 0.5rem 0.55rem 0.6rem; column-gap: 0.45rem; }
-.beamer .stepper.many .step-icon { width: 2rem; height: 2rem; font-size: 1rem; }
-.beamer .stepper.many .step-text small { display: none; }
-.beamer .stepper.many .step-text b { font-size: 0.86rem; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; hyphens: auto; }
 
 /* Beamer-Menü (dezent, wird beim Überfahren deutlich) */
 .beamer-menu { position: fixed; right: 0.8rem; bottom: 0.8rem; z-index: 90; }
@@ -311,10 +301,23 @@ body { overflow: hidden; }
 .hm-top { text-align: center; font-size: 1.35rem; }
 .questions-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; animation: rise 0.5s both; }
 .q-card { padding: 1rem 1.2rem; display: flex; gap: 0.8rem; align-items: center; font-size: 1.25rem; }
-.q-card span { font-size: 2rem; }
+.q-card .bi { font-size: 1.8rem; color: var(--gn-primary); }
 .consent-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding-top: 12px !important; padding-bottom: 12px !important; flex: none; }
 .cs-item { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; }
 .cs-item .bi { grid-row: span 2; font-size: calc(30px * var(--bscale, 1)); color: var(--gn-primary); }
 .cs-item b { font-size: calc(24px * var(--bscale, 1)); line-height: 1.1; }
 .cs-item span { color: var(--muted); line-height: 1.25; font-size: calc(14px * var(--bscale, 1)); }
 .tnode .avatar-svg, .bnode .avatar-svg { overflow: visible; }
+
+/* ---------- Vereinfachtes Design: Beamer */
+.beamer { gap: 1.1rem; }
+.b-title h1 { font-size: 2.7rem; }
+.beamer .track { gap: 0.45rem; }
+.beamer .track-head { font-size: 1rem; }
+.beamer .track-bar { gap: 0.35rem; }
+.beamer .track-bar li { height: 0.55rem; }
+.joinbox { box-shadow: none; }
+.task-panel { background: none; border: 0; padding: 0.4rem 0.4rem 0 0; }
+.task-panel .mode { color: var(--muted); }
+.task-panel ol li::marker { color: var(--muted); }
+.stage-card { box-shadow: none; }

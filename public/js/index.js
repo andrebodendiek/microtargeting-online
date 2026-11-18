@@ -36,7 +36,7 @@ function App() {
     <main class="landing">
       <header class="hero stagger">
         <${Logo} size=${54} />
-        <h1>Das <span class="grad">Microtargeting</span>-Labor</h1>
+        <h1>Das Microtargeting-Labor</h1>
         <p class="muted">Wie entsteht personalisierte Werbung? Ein Live-Spiel für die ganze Klasse: Likes verteilen, Daten auswerten, Werbung platzieren – und am Ende sehen, was ein soziales Netzwerk wirklich über euch weiß.</p>
       </header>
       <section class="landing-grid stagger">
@@ -45,14 +45,14 @@ function App() {
           <h2>Raum beitreten</h2>
           <input class="form-control code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE"
             value=${code} onInput=${(e) => { setCode(e.target.value.toUpperCase()); setErr(''); }} aria-label="Raumcode" />
-          <button class="btn btn-primary w-100">Los geht's →</button>
+          <button class="btn btn-primary w-100">Los geht's</button>
         </form>
         <div class="glass panel">
           <span class="kicker">Für Lehrkräfte</span>
           <h2>Neues Spiel starten</h2>
-          <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Die SchülerInnen brauchen keine Anmeldung und keine echten Namen.</p>
+          <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Die SchülerInnen melden sich mit ausgedachten Adressen an – ohne echte Namen.</p>
           ${me == null ? html`<small class="muted">…</small>` : !me.teacher ? html`<${TeacherLogin} configured=${me.configured} onSuccess=${refreshMe} />` : html`
-            <button class="btn btn-primary w-100" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : '+ Raum erstellen'}</button>
+            <button class="btn btn-primary w-100" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : 'Raum erstellen'}</button>
             ${rooms.length > 0 && html`<div class="my-rooms">
               <small class="muted">Deine letzten Räume</small>
               ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
@@ -66,9 +66,9 @@ function App() {
         </div>
       </section>
       ${err && html`<p class="error">${err}</p>`}
-      <section class="how glass stagger">
-        ${[['❤️', 'Liken', 'Alle scrollen durch den bubbl-Feed und verteilen Likes.'], ['📊', 'Auswerten', 'Gruppen erstellen gemeinsam eine Interessen-Datenbank.'], ['🎯', 'Targeten', 'Gruppen platzieren Werbung – gegen einen Algorithmus.'], ['🕵️', 'Enthüllen', 'Tracking, Profile, Filterblase und Wahlwerbung werden sichtbar.']].map(([i, t, d]) => html`
-          <div class="how-item"><span>${i}</span><b>${t}</b><small class="muted">${d}</small></div>`)}
+      <section class="how stagger">
+        ${[['heart', 'Liken', 'Alle scrollen durch den bubbl-Feed und verteilen Likes.'], ['database', 'Auswerten', 'Gruppen erstellen gemeinsam eine Interessen-Datenbank.'], ['bullseye', 'Targeten', 'Gruppen platzieren Werbung – gegen einen Algorithmus.'], ['incognito', 'Enthüllen', 'Tracking, Profile, Filterblase und Wahlwerbung werden sichtbar.']].map(([i, t, d]) => html`
+          <div class="how-item"><i class=${`bi bi-${i}`}></i><b>${t}</b><small class="muted">${d}</small></div>`)}
       </section>
       <footer class="muted foot">Nach einer Unterrichtsidee von Anna Rebmann (WBM Informatik, Kohorte III) · digital erweitert · <a href="/bildnachweise">Bildnachweise</a></footer>
     </main>`;

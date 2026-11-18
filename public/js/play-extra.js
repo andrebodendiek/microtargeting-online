@@ -10,7 +10,7 @@ export function TrackingInspector({ log = [] }) {
   const [open, setOpen] = useState(null);
   const entries = log.slice().reverse();
   return html`<div class="glass pad inspector">
-    <h3>🔍 Tracking-Inspektor</h3>
+    <h3>Tracking-Inspektor</h3>
     <p class="muted small">Das hat dein Handy an den bubbl-Server geschickt – automatisch alle paar Sekunden, ohne dass du etwas angeklickt hast. Genau so arbeiten echte Apps (nur viel häufiger).</p>
     <div class="req-list">
       ${entries.length ? entries.map((e, i) => html`<button class=${`req ${open === i ? 'open' : ''}`} onClick=${() => setOpen(open === i ? null : i)}>
@@ -42,7 +42,7 @@ export function Auskunft({ code }) {
   }
   const d = data;
   return html`<div class="glass pad">
-    <h3>📄 Datenauskunft nach Art. 15 DSGVO</h3>
+    <h3>Datenauskunft nach Art. 15 DSGVO</h3>
     <p class="muted small">Du hast das Recht zu erfahren, welche Daten ein Unternehmen über dich speichert. Fordere deine Auskunft an!</p>
     <button class="btn btn-primary" disabled=${busy} onClick=${load}>${busy ? 'Wird erstellt …' : d ? 'Aktualisieren' : 'Meine Daten anfordern'}</button>
     ${err && html`<p class="error">${err}</p>`}
@@ -109,7 +109,7 @@ export function Werkbank({ v, act }) {
       <p class="muted small">Alle in eurer Gruppe sehen und verändern dieselben Regler.</p>
     </div>
     <div class="glass pad bb-col">
-      <h3>🛠️ Euer Targeting-Algorithmus</h3>
+      <h3>Euer Targeting-Algorithmus</h3>
       ${SIGNALS.map(([k, label, hint]) => html`<label class="slider">
         <span class="slider-head"><b>${label}</b><em>${fmtW(w[k])}</em></span>
         <input type="range" min="0" max="5" step="0.5" value=${w[k]} onInput=${(e) => change(k, Number(e.target.value))} />
@@ -128,7 +128,7 @@ export function Werkbank({ v, act }) {
   mit den meisten Punkten, falls punkte > ${fmtW(w.threshold)}`}</pre>
     </div>
     <div class="glass pad bb-col">
-      <h3>📈 Ergebnis mit Trainingsdaten</h3>
+      <h3>Ergebnis mit Trainingsdaten</h3>
       <p class="muted small">Geprüft an euren echten Bewertungen der Anzeigen ${wb.split.train.map((id) => AD[id]?.label).join(', ')}.</p>
       <div class="metrics"><${Metric} big label="Gesamtwert (F1)" value=${r.f1} hint="verbindet beide Werte" /><${Metric} label="Trefferquote" value=${r.precision} hint="gezeigt & passend" /><${Metric} label="Reichweite" value=${r.recall} hint="Interessierte erreicht" /></div>
       <${Confusion} r=${r} />
@@ -139,7 +139,7 @@ export function Werkbank({ v, act }) {
     </div>
     ${wb.test ? html`<div class="glass pad bb-col test-card">
       <span class="kicker">Aufgedeckt</span>
-      <h3>🧪 Und mit neuen Testdaten?</h3>
+      <h3>Und mit neuen Testdaten?</h3>
       <p class="muted small">Anzeigen, die euer Algorithmus noch nie „gesehen“ hat: ${wb.split.test.map((id) => AD[id]?.label).join(', ')}.</p>
       <div class="metrics"><${Metric} big label="F1 Testdaten" value=${wb.result.test.f1} /><${Metric} label="F1 Training" value=${r.f1} /></div>
       <p class="small">${wb.result.test.f1 != null && r.f1 != null && wb.result.test.f1 < r.f1 - 0.1 ? '⚠️ Deutlich schlechter als im Training: Euer Algorithmus ist an die Trainingsdaten überangepasst (Overfitting).' : '✓ Euer Algorithmus funktioniert auch mit neuen Daten ähnlich gut – er verallgemeinert.'}</p>

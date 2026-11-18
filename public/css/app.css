@@ -123,22 +123,6 @@ button.chip:active { transform: scale(0.96); }
 .bb-progress.big .bb-progress-bar { height: 14px; }
 .bb-progress.big .bb-progress-label { font-size: 18px; }
 
-.stepper { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
-.step > button { all: unset; }
-.step > button { display: contents; cursor: pointer; }
-.step { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 10px; padding: 10px 12px 12px; border-radius: 16px; background: var(--field); border: 1px solid transparent; transition: background 0.3s, transform 0.3s; min-width: 0; }
-.step-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; background: var(--glas-strong); grid-row: span 2; }
-.step-text { display: flex; flex-direction: column; min-width: 0; }
-.step-text small { font-size: 11px; color: var(--faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.step-text b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.step-bar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--line); margin-top: 8px; overflow: hidden; }
-.step-bar i { display: block; height: 100%; background: var(--brand); transition: width 0.6s; }
-.step.done { opacity: 0.75; }
-.step.done .step-icon { background: var(--ok); color: #fff; font-weight: 800; }
-.step.now { background: var(--glas-strong); border-color: color-mix(in srgb, var(--akzent) 50%, transparent); box-shadow: var(--glow); }
-.step.now .step-icon { background: var(--brand); color: #fff; box-shadow: 0 0 0 4px rgba(31,176,199,.18); }
-.step.next { opacity: 0.55; }
-
 /* ---------------------------------------------------------------- Beitrag (Social Post) */
 .post { overflow: hidden; animation: rise 0.45s both; }
 .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
@@ -260,13 +244,6 @@ button.chip:active { transform: scale(0.96); }
 .chip { border-radius: 0.5rem; }
 .chip.on-all { background: var(--gn-dark); color: #fff; }
 
-/* Viele Schritte (bis zu 12): kompakte Schrittleiste – Cockpit */
-.stepper.many { gap: 6px; }
-.stepper.many .step { padding: 8px 8px 9px; column-gap: 6px; }
-.stepper.many .step-icon { width: 28px; height: 28px; font-size: 14px; }
-.stepper.many .step-text small { display: none; }
-.stepper.many .step-text b { font-size: 12.5px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; hyphens: auto; }
-
 /* ---------------------------------------------------------------- Dropdown-Menüs */
 .bb-dropdown { position: relative; display: inline-block; }
 .bb-dropdown > .dropdown-toggle::after { margin-left: 0.15rem; transition: transform 0.18s; }
@@ -368,3 +345,65 @@ button.chip:active { transform: scale(0.96); }
 .comment { display: flex; gap: 10px; }
 .comment small { display: block; margin-top: 2px; }
 .c-av { width: 32px; height: 32px; border-radius: 50%; background: var(--field); display: grid; place-items: center; color: var(--muted); flex: none; }
+
+/* ================================================================
+   Vereinfachtes Design (Nov. 2026): flache Flächen, eine Akzentfarbe,
+   kaum Rahmen, ruhige Typografie – Bewegung nur als dezentes Feedback.
+   ================================================================ */
+:root {
+  --bg: #f6f7f8;
+  --line: #e8ebed;
+  --field: #f2f4f5;
+  --muted: #5d6468;
+  --faint: #8d9498;
+  --brand: #0C5D6A;                 /* keine Verläufe mehr */
+  --glow: none;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --r: 14px;
+  --bs-body-bg: #f6f7f8;
+}
+body { background: var(--bg); }
+.glass, .card { border: 1px solid var(--line); box-shadow: none; border-radius: var(--r); }
+h1, h2, h3, h4 { color: var(--text); letter-spacing: -0.015em; }
+.kicker { color: var(--muted) !important; letter-spacing: 0.08em; font-weight: 700; }
+.grad { background: none !important; color: var(--gn-primary) !important; -webkit-text-fill-color: currentColor; }
+
+/* Buttons: ruhig, gefüllt statt umrandet */
+.btn { --bs-btn-border-radius: 10px; --bs-btn-bg: var(--field); --bs-btn-border-color: transparent; --bs-btn-hover-bg: #e8ecee; --bs-btn-hover-border-color: transparent; --bs-btn-active-bg: #e1e6e9; --bs-btn-active-border-color: transparent; --bs-btn-disabled-bg: var(--field); --bs-btn-disabled-border-color: transparent; transition: background .15s, transform .1s; }
+.btn:active { transform: scale(0.98); }
+.btn.btn-sm { --bs-btn-border-radius: 8px; }
+.icon-btn { border-radius: 10px; }
+
+/* Chips, Pillen, Gruppen */
+.chip { border-color: transparent; background: var(--field); border-radius: 999px; }
+.chip.cat.on { background: color-mix(in srgb, var(--c) 14%, #fff); border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+.status-pill { border-radius: 999px; }
+.group-badge { border: 0; background: color-mix(in srgb, var(--g) 12%, #fff); }
+.ic { font-size: 0.95em; }
+.avatar { box-shadow: none; }
+
+/* Fortschritt ohne Schimmer */
+.bb-progress-bar { height: 8px; }
+.bb-progress-bar i { background: var(--gn-primary); }
+.bb-progress-bar i::after { display: none; }
+
+/* Schrittleiste: schlanker Segmentbalken */
+.track { display: flex; flex-direction: column; gap: 6px; }
+.track-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.track-head b { color: var(--text); }
+.track-next { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-bar { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+.track-bar li { height: 6px; border-radius: 6px; background: #e3e7ea; position: relative; overflow: hidden; }
+.track-bar li.done { background: var(--gn-primary); opacity: 0.55; }
+.track-bar li.now { background: color-mix(in srgb, var(--gn-primary) 22%, #fff); }
+.track-bar li.now i { position: absolute; inset: 0 auto 0 0; background: var(--gn-primary); border-radius: 6px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+
+/* Bottom-Sheet ohne Glas */
+.sheet { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 20px 20px 0 0; }
+.sheet-backdrop { background: rgba(16, 24, 40, 0.4); backdrop-filter: none; }
+.bb-menu { border-radius: 12px; box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12); }
+
+/* Beitrag: nah am echten Netzwerk, ohne Zierrat */
+.post { border-radius: var(--r); }
+.like-btn.on svg { transform: scale(1.06); }
+.insight { background: var(--field); border-left: 0; }
