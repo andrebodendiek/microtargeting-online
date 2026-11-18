@@ -271,6 +271,7 @@ function App() {
       <a class="btn btn-sm btn-primary" href=${beamerUrl} target="bubbl-beamer"><i class="bi bi-display"></i> <span class="cp-hide-sm">Beamer öffnen</span></a>
       <${Dropdown} btnClass="btn btn-sm btn-ghost" icon="person-circle" items=${[
         { header: 'Lehrkraft' },
+        { label: 'Musterablauf & Demo-Video', icon: 'signpost-split', hint: 'Ablauf aus Sicht von Lehrkraft und SuS', href: '/ablauf', target: 'bubbl-ablauf' },
         { label: 'Inhalts-Editor & KI', icon: 'pencil-square', href: '/editor', target: 'bubbl-editor' },
         { label: 'Startseite / meine Räume', icon: 'house', href: '/' },
         { divider: true },

@@ -26,6 +26,9 @@ Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna R
 
 Fachdidaktischer Fokus: Neben der gesellschaftlichen Perspektive (Manipulation, Filterblase, Fairness) wird die technische Seite sichtbar – Datenformate (JSON), Client-Server-Kommunikation, gewichtete Bewertungsfunktionen, Bewertung von Klassifikatoren (Präzision, Recall, F1, Wahrheitsmatrix), Trainings- und Testdaten, Overfitting, Proxy-Merkmale, Rechte nach DSGVO.
 
+## Musterablauf & Demo-Video
+Unter **`/ablauf`** steht ein druckbarer Unterrichtsverlauf (Doppelstunde oder Kurzvariante) – je Schritt: Zeitfenster, was die Lehrkraft tut (mit den Cockpit-Knöpfen), was die SchülerInnen tun, was der Beamer zeigt, die empfohlene Innehalten-Frage und Screenshots von Beamer und Handy. Dazu ein **Demo-Video** (2:16 Min., `/video/bubbl-ablauf.mp4`): ein echter, automatisch mit Test-SchülerInnen durchgespielter Ablauf, links Beamer, rechts ein Schüler-Handy, unten die Rollen. Neu erzeugen nach Änderungen: `TEACHER_PASSWORD=… node scripts/render-ablauf.mjs` (laufender Server, Playwright, ffmpeg).
+
 ## Intro-Film (1:16 Min.)
 Ein kurzer animierter Erklärfilm, worum es geht und was die Ziele sind (Daten sammeln → Profil → Microtargeting → Feeds/Shorts → Lernziele). Er läuft im Portal: im Cockpit in der Lobby „Intro-Film auf dem Beamer“ (synchron auf dem Beamer), auf jedem Handy über die Karte „Worum geht's bei bubbl?“, frei unter `/intro` und als MP4 zum Herunterladen (`/video/bubbl-intro.mp4`). Nach Änderungen am Film (`public/js/intro.js`) lässt sich das MP4 neu erzeugen: `node scripts/render-intro.mjs` (laufender Server, Playwright, ffmpeg).
 

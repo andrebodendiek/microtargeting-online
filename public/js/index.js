@@ -51,6 +51,7 @@ function App() {
         <div class="glass panel">
           <span class="kicker">Für Lehrkräfte</span>
           <h2>Neues Spiel starten</h2>
+          <a class="small" href="/ablauf"><i class="bi bi-signpost-split"></i> Musterablauf & Demo-Video ansehen</a>
           <p class="muted small">Erstellt einen Raum mit Code, QR-Code und Beamer-Ansicht. Die SchülerInnen melden sich mit ausgedachten Adressen an – ohne echte Namen.</p>
           ${me == null ? html`<small class="muted">…</small>` : !me.teacher ? html`<${TeacherLogin} configured=${me.configured} onSuccess=${refreshMe} />` : html`
             <button class="btn btn-primary w-100" disabled=${busy} onClick=${create}>${busy ? 'Erstelle …' : 'Raum erstellen'}</button>
@@ -59,6 +60,7 @@ function App() {
               ${rooms.map((r) => html`<a class="room-link" href=${`/teacher?c=${r.code}#${r.key}`}><b>${r.code}</b><span>${new Date(r.at).toLocaleDateString('de-DE')}</span></a>`)}
             </div>`}
             <div class="row-btns"><${Dropdown} btnClass="btn btn-sm" icon="person-circle" label="Angemeldet als Lehrkraft" align="start" items=${[
+              { label: 'Musterablauf & Demo-Video', icon: 'signpost-split', hint: 'So läuft eine Stunde ab', href: '/ablauf' },
               { label: 'Inhalts-Editor & KI', icon: 'pencil-square', hint: 'Beiträge, Anzeigen, Quiz aktualisieren', href: '/editor' },
               ...(rooms.length ? [{ divider: true }, { header: 'Letzte Räume' }, ...rooms.slice(0, 6).map((r) => ({ label: r.code, icon: 'door-open', hint: new Date(r.at).toLocaleDateString('de-DE'), href: `/teacher?c=${r.code}#${r.key}` }))] : []),
               { divider: true },
