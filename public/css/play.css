@@ -32,7 +32,7 @@ h3 { font-size: 17px; margin-bottom: 8px; }
 /* Lobby */
 .hero-card { display: flex; flex-direction: column; align-items: center; padding: 28px 18px; gap: 6px; text-align: center; }
 .hero-card p { margin: 0; }
-.big-id { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1; }
+.big-id { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; color: var(--gn-primary); line-height: 1; }
 .avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 8px; }
 .av-pick { aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; background: var(--field); font-size: 26px; transition: transform 0.15s, border 0.15s; }
 .av-pick:hover { transform: scale(1.08); }

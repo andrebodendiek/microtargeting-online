@@ -182,7 +182,7 @@ function Werbung({ v }) {
 
 function DuelCard({ who, icon, d, win, note }) {
   return html`<div class=${`duel-card glass ${win ? 'win' : ''}`}>
-    <div class="duel-head"><span class="duel-icon">${icon}</span><h3>${who}</h3>${win && html`<span class="crown">👑</span>`}</div>
+    <div class="duel-head"><i class=${`bi bi-${icon} duel-icon`}></i><h3>${who}</h3>${win && html`<span class="crown"><i class="bi bi-trophy-fill"></i> vorn</span>`}</div>
     <div class="duel-main"><b>${d.precision == null ? '–' : html`<${CountUp} value=${d.precision * 100} />`}<small>%</small></b><span>Trefferquote<br/><small class="muted">${d.hits} von ${d.shownRated} gezeigten Anzeigen passten</small></span></div>
     <div class="duel-sub">
       <div><b>${d.recall == null ? '–' : `${Math.round(d.recall * 100)} %`}</b><small>Reichweite: erreichte Interessierte</small></div>
@@ -201,9 +201,9 @@ function Empfang({ v }) {
   useEffect(() => { if (ready && !fired.current && v.progress.done === v.progress.total) { fired.current = true; confetti(120); } }, [ready, v.progress.done]);
   return html`<div class="stack">
     <div class="duel">
-      <${DuelCard} who="Menschen (eure Gruppen)" icon="👥" d=${d.human} win=${humanWins} note="Nur Likes aus der Datenbank – von Hand ausgewertet." />
+      <${DuelCard} who="Menschen (eure Gruppen)" icon="people" d=${d.human} win=${humanWins} note="Nur Likes aus der Datenbank – von Hand ausgewertet." />
       <span class="vs">VS</span>
-      <${DuelCard} who="bubbl-Algorithmus" icon="🤖" d=${d.algo} win=${algoWins} note="Likes + heimlich gemessene Verweildauer & Klicks – in Millisekunden." />
+      <${DuelCard} who="bubbl-Algorithmus" icon="cpu" d=${d.algo} win=${algoWins} note="Likes + heimlich gemessene Verweildauer & Klicks – in Millisekunden." />
     </div>
     <div class="glass stage-card">
       <div class="per-ad">${ADS.map((a) => {
@@ -211,7 +211,7 @@ function Empfang({ v }) {
         const hu = calc(v.human || {}), al = calc(v.algo || {});
         const fans = v.players.filter((p) => v.ratings[p.id]?.[a.id] === 1).length;
         return html`<div class="pa"><span class="pa-emoji" style=${`--c:${a.bg[0]}`}>${a.art[0]}</span><b>${a.label}</b>
-          <span>👥 ${hu.h}/${hu.s}</span><span>🤖 ${al.h}/${al.s}</span><small class="muted">${fans} fanden sie gut</small></div>`;
+          <span title="Menschen"><i class="bi bi-people"></i> ${hu.h}/${hu.s}</span><span title="Algorithmus"><i class="bi bi-cpu"></i> ${al.h}/${al.s}</span><small class="muted">${fans} fanden sie gut</small></div>`;
       })}</div>
     </div>
   </div>`;
