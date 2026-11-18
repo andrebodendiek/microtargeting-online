@@ -332,7 +332,62 @@ function Reflexion({ v }) {
   </div>`;
 }
 
-const STAGES = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: WerkbankStage, fairness: FairnessStage, quiz: QuizStage };
+// Innehalten: Frage groß über der Bühne, Antworten live, Auflösung mit Erkenntnis
+const fmtMinB = (ms) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+function PauseStage({ pz }) {
+  const total = Math.max(1, (pz.counts || []).reduce((a, b) => a + b, 0));
+  const realTotal = pz.real ? Math.max(1, pz.real.reduce((a, b) => a + b, 0)) : 1;
+  return html`<div class="b-pause">
+    <div class="b-pause-card">
+      <div class="b-pause-head"><span><i class="bi bi-pause-circle"></i> Innehalten</span><span class="muted">${pz.answered} / ${pz.n} haben geantwortet</span></div>
+      <h2>${pz.q}</h2>
+      <div class="b-pause-bars">${pz.options.map((o, k) => { const share = (pz.counts?.[k] || 0) / total; return html`<div class=${`b-pause-row ${pz.correct === k ? 'correct' : ''}`}>
+        <span>${o}</span><div class="b-pause-track"><i style=${`width:${Math.round(share * 100)}%`}></i>${pz.real && html`<em style=${`width:${Math.round(((pz.real[k] || 0) / realTotal) * 100)}%`}></em>`}</div><b>${pz.counts?.[k] || 0}</b></div>`; })}</div>
+      ${pz.real && html`<div class="b-pause-legend"><span><i class="lg-est"></i> geschätzt</span><span><i class="lg-real"></i> tatsächlich gemessen</span></div>`}
+      ${pz.insight && html`<p class="b-pause-insight"><i class="bi bi-lightbulb"></i> ${pz.insight}</p>`}
+    </div>
+  </div>`;
+}
+
+function Shorts({ v }) {
+  const s = v.shorts;
+  if (!s) return null;
+  const pct = (x) => (x == null ? '–' : `${Math.round(x * 100)} %`);
+  const minutes = s.totalMs / 60000;
+  return html`<div class="stack">
+    <div class="big-stats">
+      <div class="bstat glass"><small>Clips angesehen</small><b><${CountUp} value=${s.count} /></b><span>von ${s.people} Personen</span></div>
+      <div class="bstat glass glow"><small>Gemeinsame Zeit im Feed</small><b>${fmtMinB(s.totalMs)}</b><span>Minuten${s.people ? ` · Ø ${fmtMinB(s.totalMs / s.people)} pro Person` : ''}</span></div>
+      <div class="bstat glass"><small>Werbeclips gesehen</small><b><${CountUp} value=${s.ads} /></b><span>jeder 5. Clip</span></div>
+      <div class="bstat glass"><small>Likes vergeben</small><b>0</b><span>nur Wiedergabezeit zählt</span></div>
+    </div>
+    <div class="split">
+      <div class="glass stage-card">
+        <div class="card-head"><h3>Der Feed wird enger</h3><span class="metric">${pct(s.firstShare)} → <b>${pct(s.lastShare)}</b></span></div>
+        <p class="muted">Anteil des jeweils häufigsten Themas pro 5 Clips (Durchschnitt aller)</p>
+        <div class="b-curve">${s.curve.map((x, i) => html`<div class="bc-col"><b>${pct(x)}</b><i style=${`height:${Math.round((x || 0) * 100)}%`}></i><small>${i * 5 + 1}–${i * 5 + 5}</small></div>`)}
+          ${!s.curve.length && html`<p class="muted">Noch keine Clips angesehen …</p>`}</div>
+      </div>
+      ${s.stopped ? html`<div class="glass stage-card">
+        <div class="card-head"><h3>Die Tricks hinter Shorts</h3></div>
+        <ul class="b-problems">
+          <li><i class="bi bi-infinity"></i><b>Kein Ende</b><span>Endlos-Feed ohne letzte Seite</span></li>
+          <li><i class="bi bi-play-circle"></i><b>Autoplay</b><span>Weiterschauen ist der Standard</span></li>
+          <li><i class="bi bi-stopwatch"></i><b>Wiedergabezeit</b><span>Hinschauen reicht als Signal</span></li>
+          <li><i class="bi bi-funnel"></i><b>Rabbit Hole</b><span>Was festhält, kommt öfter</span></li>
+          <li><i class="bi bi-badge-ad"></i><b>Werbung im Fluss</b><span>sieht aus wie ein normaler Clip</span></li>
+          <li><i class="bi bi-moon-stars"></i><b>Zeitgefühl</b><span>„Nur 5 Minuten“ werden ${minutes >= 1 ? 'schnell mehr' : 'zu viel'}</span></li>
+        </ul>
+      </div>` : html`<div class="glass stage-card">
+        <div class="card-head"><h3>Hauptthemen laut Wiedergabezeit</h3></div>
+        <${CatBars} a=${Object.fromEntries(Object.entries(s.tops).map(([k, n]) => [k, s.people ? n / s.people : 0]))} aLabel="Anteil der Personen mit diesem Hauptthema" />
+        <p class="insight">Niemand hat etwas geliked – trotzdem weiß bubbl, was euch festhält.</p>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+const STAGES = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: WerkbankStage, fairness: FairnessStage, quiz: QuizStage, shorts: Shorts };
 
 export function BeamerStage({ v }) {
   const Stage = STAGES[v.phase] || Lobby;
@@ -347,6 +402,7 @@ export function BeamerStage({ v }) {
       ${v.phase !== 'lobby' && html`<${TaskPanel} v=${v} />`}
       <section class="b-stage"><${Stage} v=${v} /></section>
     </main>
+    ${v.pause && html`<${PauseStage} pz=${v.pause} />`}
   </div>`;
 }
 

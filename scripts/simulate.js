@@ -76,6 +76,29 @@ for (const b of bots) b.s.on('state', async (st) => {
     b.wb = true; await sleep(800);
     for (let k = 0; k < 3; k++) { b.act('weights', { weights: { like: 1 + Math.round(Math.random() * 6) / 2, dwell: Math.round(Math.random() * 8) / 2, open: Math.round(Math.random() * 4) / 2, read: Math.round(Math.random() * 4) / 2, threshold: 0 } }); await sleep(700); }
   }
+  // Innehalten: antworten (einmal pro Frage)
+  if (st.pause && !st.pause.revealed && st.pause.my == null && b.pz !== `${st.pause.phase}:${st.pause.i}`) {
+    b.pz = `${st.pause.phase}:${st.pause.i}`; await sleep(800 + Math.random() * 4000);
+    b.act('pauseAnswer', { value: Math.floor(Math.random() * st.pause.options.length) });
+  }
+  // Shorts: Lieblingsthema lange schauen, anderes schnell wegwischen (Zeitraffer, höchstens 60 Clips)
+  if (st.phase === 'shorts' && !b.shortsLoop) {
+    b.shortsLoop = true; b.fav ||= CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)].id;
+    (async () => {
+      let n = 0;
+      while (b.state?.phase === 'shorts' && n < 60) {
+        const sh = b.state.shorts;
+        const cur = sh?.queue?.[0];
+        if (sh && !sh.stopped && cur && cur.id !== b.lastShort) {
+          b.lastShort = cur.id; n++;
+          const ms = cur.ad ? 3000 + Math.random() * 4000 : cur.cat === b.fav ? cur.ms * (0.7 + Math.random() * 0.3) : 600 + Math.random() * 3500;
+          b.act('shortWatched', { id: cur.id, ms });
+        }
+        await sleep(350 + Math.random() * 500);
+      }
+      b.shortsLoop = false;
+    })();
+  }
   if (st.phase === 'profil' && st.profile && !b.inf) { b.inf = true; for (const i of st.profile.inferences) b.act('infer', { key: i.key, value: Math.random() < 0.55 }); }
   if (st.phase === 'werbung' && st.group && st.adWork && !b.adv && st.group.members[0]?.id === b.id) {
     b.adv = true; await sleep(1000);

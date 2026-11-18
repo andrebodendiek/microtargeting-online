@@ -23,6 +23,7 @@ const HINTS = {
   werkbank: 'Die Gruppen stellen Gewichte für Likes und Tracking-Signale ein und sehen live Trefferquote, Reichweite und F1 – geprüft an den echten Bewertungen aus „Werbung erhalten“ (Trainingsdaten = erste 4 Anzeigen). Zum Schluss „Testdaten aufdecken“: Wer hat überangepasst (Overfitting)?',
   fairness: 'Ein Angebot für alle (z. B. Ausbildungsplatz) wird klick-optimiert nur an die „typische“ Zielgruppe ausgespielt. Erst antworten lassen, dann diskutieren und die „Fairness-Regel“ einschalten: Wie ändert sich die Verteilung? Begriffe: Proxy-Merkmal, indirekte Diskriminierung.',
   quiz: 'Live-Quiz zur Sicherung. „Frage starten“ → 20 s Antwortzeit → „Auflösen“ zeigt Lösung, Erklärung und Bestenliste. Fragen lassen sich im Inhalts-Editor (auch per KI) anpassen.',
+  shorts: 'Simulierter Kurzvideo-Feed: lernt nur aus der Wiedergabezeit, Werbung jeder 5. Clip. Zum Schluss „Shorts stoppen & aufdecken“.',
   reflexion: 'Originale Reflexionsfragen aus dem Material. Notizen erscheinen anonym auf dem Beamer und können hier ausgeblendet werden. Am Ende: CSV exportieren.',
 };
 
@@ -78,6 +79,7 @@ function PhaseActions({ v, act, sock, copy }) {
     case 'lobby': return html`${b('SchülerInnen-Link kopieren', 'link-45deg', copy)}<a class="btn" href=${beamerUrl} target="bubbl-beamer"><i class="bi bi-qr-code"></i> QR-Code auf dem Beamer</a>${b('Neueste Inhalte laden', 'box-arrow-in-down', () => sock.current?.emit('useLatestContent', {}, (r) => alert(r?.ok ? 'Neueste Inhalte aus dem Editor wurden übernommen.' : r?.error)))}`;
     case 'auswertung': return b('Entstehung erneut abspielen', 'play-circle', () => act('replayDb'), true);
     case 'werbung': return html`${b('Restliche Anzeigen automatisch schalten', 'lightning-charge', () => confirm('Nicht geschaltete Anzeigen automatisch (nach Datenbank) schalten?') && act('autoAds'))}${b('Gruppen neu bilden', 'shuffle', () => confirm('Gruppen neu bilden? Bisherige Gruppen-Eingaben gehen verloren.') && act('regroup'))}`;
+    case 'shorts': return b(v.shorts?.stopped ? 'Shorts wieder freigeben' : 'Shorts stoppen & aufdecken', v.shorts?.stopped ? 'play-fill' : 'stop-circle', () => act('shortsStop', { value: !v.shorts?.stopped }), !v.shorts?.stopped);
     case 'werkbank': return b(v.werkbank?.test ? 'Testdaten verbergen' : 'Testdaten aufdecken', v.werkbank?.test ? 'eye-slash' : 'clipboard-data', () => act('werkbankTest', { value: !v.werkbank?.test }), !v.werkbank?.test);
     case 'fairness': return b(v.fairness?.rule ? 'Fairness-Regel ausschalten' : 'Fairness-Regel einschalten', 'shield-check', () => act('fairRule', { value: !v.fairness?.rule }), !v.fairness?.rule);
     case 'wahl': return b(v.voteRevealed ? 'Wieder verdecken' : 'Botschaften aufdecken', v.voteRevealed ? 'eye-slash' : 'search', () => act('revealVote', { value: !v.voteRevealed }), !v.voteRevealed);
@@ -109,12 +111,31 @@ function NowCard({ v, act, sock, copy }) {
     </div>
     <div class="cp-progress"><div class="cp-bar"><i style=${`width:${pct}%`}></i></div><span><b>${v.progress.done}</b> / ${v.progress.total} ${v.progress.label}</span></div>
     <div class="cp-actions"><${PhaseActions} v=${v} act=${act} sock=${sock} copy=${copy} /></div>
+    <${PausePanel} v=${v} act=${act} />
     <${Guide} v=${v} p=${p} />
     ${v.phase === 'reflexion' && v.reflexion && html`<div class="cp-notes"><h3>Notizen für den Beamer <small class="muted">(Häkchen = sichtbar)</small></h3>
       ${v.reflexion.notes.length ? v.reflexion.notes.map((n) => html`<label class=${`note-mod ${n.hidden ? 'hidden' : ''}`}>
         <input class="form-check-input" type="checkbox" checked=${!n.hidden} onChange=${(e) => act('hideNote', { key: n.key, value: !e.target.checked })} />
         <span>${n.kind === 'pro' ? '👍' : '👎'} ${n.text}</span><small class="muted">#${n.id}</small></label>`) : html`<small class="muted">Noch keine Notizen.</small>`}</div>`}
   </section>`;
+}
+
+// ------------------------------------------------------------------ Innehalten: Reflexionsfrage auf alle Handys schicken
+function PausePanel({ v, act }) {
+  const list = v.pauses || [];
+  if (!list.length) return null;
+  const cur = v.pause;
+  return html`<div class="cp-pause">
+    <div class="cp-pause-head"><i class="bi bi-pause-circle"></i><b>Innehalten</b><small class="muted">Frage erscheint auf allen Handys und groß auf dem Beamer</small></div>
+    ${list.map((x) => { const active = cur && cur.i === x.i; return html`<div class=${`cp-pause-row ${active ? 'active' : ''}`}>
+      <span class="cp-pause-q">${x.q}</span>
+      <small class="muted">${active ? `${cur.answered}/${cur.n} Antworten` : x.answered ? `${x.answered} Antworten` : ''}</small>
+      ${active ? html`<span class="cp-pause-btns">
+          ${!cur.revealed && html`<button class="btn btn-sm btn-primary" onClick=${() => act('pauseReveal', { value: true })}><i class="bi bi-bar-chart"></i> Auflösen</button>`}
+          <button class="btn btn-sm" onClick=${() => act('pauseStop')}><i class="bi bi-x-lg"></i> Beenden</button></span>`
+        : html`<button class="btn btn-sm" onClick=${() => act('pauseStart', { i: x.i })}><i class="bi bi-play-fill"></i> ${x.answered ? 'Erneut zeigen' : 'Starten'}</button>`}
+    </div>`; })}
+  </div>`;
 }
 
 // ------------------------------------------------------------------ Ausführungshinweise (je Schritt)

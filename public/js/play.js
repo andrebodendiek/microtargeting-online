@@ -423,6 +423,141 @@ function Reflexion({ v, act }) {
   </section>`;
 }
 
+// ------------------------------------------------------------------ Innehalten (von der Lehrkraft gestartet)
+const fmtMin = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} Min.`; };
+function PauseOverlay({ pz, act }) {
+  const total = pz.counts ? Math.max(1, pz.counts.reduce((a, b) => a + b, 0)) : 1;
+  return html`<div class="pause-overlay" role="dialog" aria-modal="true" aria-label="Innehalten">
+    <div class="pause-card">
+      <span class="pause-kicker"><i class="bi bi-pause-circle"></i> Innehalten</span>
+      <h2>${pz.q}</h2>
+      <div class="pause-options">${pz.options.map((o, k) => {
+        const share = pz.counts ? pz.counts[k] / total : null;
+        return html`<button class=${`pause-opt ${pz.my === k ? 'on' : ''} ${pz.correct === k ? 'correct' : ''}`} disabled=${pz.revealed} onClick=${() => act('pauseAnswer', { value: k })}>
+          ${share != null && html`<i class="pause-fill" style=${`width:${Math.round(share * 100)}%`}></i>`}
+          <span>${o}</span>${share != null && html`<b>${Math.round(share * 100)} %</b>`}</button>`;
+      })}</div>
+      ${pz.real && html`<p class="pause-real"><i class="bi bi-stopwatch"></i> Deine echte Zeit im Shorts-Feed: <b>${fmtMin(pz.myReal)}</b></p>`}
+      ${pz.insight ? html`<p class="pause-insight"><i class="bi bi-lightbulb"></i> ${pz.insight}</p>`
+        : html`<p class="muted small center">${pz.my == null ? 'Antworte ehrlich – die Antworten sind anonym.' : 'Danke! Gleich gibt es die Auflösung auf dem Beamer.'}</p>`}
+    </div>
+  </div>`;
+}
+
+// ------------------------------------------------------------------ Shorts-Feed (simuliert: Fotos als „Clips“, Autoplay, Wischen)
+function ShortClip({ item, playing, onDone, onSwipe, paused, onTogglePause }) {
+  const [t, setT] = useState(0);
+  const ref = useRef({ start: 0, acc: 0 });
+  useEffect(() => { ref.current = { start: performance.now(), acc: 0 }; setT(0); }, [item.id]);
+  useEffect(() => {
+    if (!playing || paused) { ref.current.acc += ref.current.start ? performance.now() - ref.current.start : 0; ref.current.start = 0; return; }
+    ref.current.start = performance.now();
+    let raf;
+    const tick = () => {
+      const el = ref.current.acc + (performance.now() - ref.current.start);
+      setT(el);
+      if (el >= item.ms) onDone(item.ms); else raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [item.id, playing, paused]);
+  const elapsed = () => ref.current.acc + (ref.current.start ? performance.now() - ref.current.start : 0);
+  const post = item.post && POST[item.post];
+  const ad = item.ad && AD[item.ad];
+  const pg = post ? (PAGES[post.page] || {}) : null;
+  const img = (post || ad)?.image?.src;
+  const st = post?.stats || { likes: 0, comments: 0, shares: 0 };
+  const skipIn = ad ? Math.max(0, Math.ceil((3000 - t) / 1000)) : 0;
+  return html`<div class="short" onClick=${onTogglePause}>
+    ${img ? html`<img class="short-img" src=${img} alt="" key=${item.id} />` : html`<div class="short-img fallback" style=${`--a:${(post || ad).bg[0]};--b:${(post || ad).bg[1]}`}>${(post || ad).art[0]}</div>`}
+    <div class="short-shade"></div>
+    <div class="short-bar"><i style=${`width:${Math.min(100, (t / item.ms) * 100)}%`}></i></div>
+    ${paused && html`<span class="short-paused"><i class="bi bi-pause-fill"></i></span>`}
+    <div class="short-side" onClick=${(e) => e.stopPropagation()}>
+      <span><i class="bi bi-heart-fill"></i>${fmtCount(Math.round((st.likes || 900) * 1.7))}</span>
+      <span><i class="bi bi-chat-dots-fill"></i>${fmtCount(st.comments || 120)}</span>
+      <span><i class="bi bi-share-fill"></i>Teilen</span>
+    </div>
+    <div class="short-info">
+      ${ad ? html`<span class="short-sponsor">Gesponsert · ${ad.brand}</span><b>${ad.product}</b><span>${ad.slogan}</span><span class="short-cta">${ad.cta} · ${ad.price}</span>`
+        : html`<span class="short-acc">@${pg.handle}${pg.verified !== false ? html` <i class="bi bi-patch-check-fill"></i>` : ''}</span><b>${post.headline}</b>${post.tags?.length ? html`<span class="short-tags">${post.tags.map((x) => `#${x}`).join(' ')}</span>` : ''}`}
+    </div>
+    <button class="short-next" onClick=${(e) => { e.stopPropagation(); if (!skipIn) onSwipe(elapsed()); }} disabled=${skipIn > 0} aria-label="Nächster Clip">
+      ${skipIn > 0 ? html`Überspringen in ${skipIn}` : html`<i class="bi bi-chevron-up"></i> Weiter`}</button>
+  </div>`;
+}
+
+function ShortsPlayer({ v, act, onClose }) {
+  const q = v.shorts.queue;
+  const cur = q[0];
+  const [paused, setPaused] = useState(false);
+  const sent = useRef(null);
+  const touch = useRef(null);
+  const finish = (ms) => { if (sent.current === cur.id) return; sent.current = cur.id; setPaused(false); act('shortWatched', { id: cur.id, ms }); };
+  useEffect(() => { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = ''; }; }, []);
+  // Vorladen der nächsten Bilder
+  useEffect(() => { q.slice(1).forEach((x) => { const src = (POST[x.post] || AD[x.ad])?.image?.src; if (src) { const i = new Image(); i.src = src; } }); }, [cur?.id]);
+  if (!cur) return null;
+  return html`<div class="shorts-player"
+      onTouchStart=${(e) => { touch.current = e.touches[0].clientY; }}
+      onTouchEnd=${(e) => { const d = touch.current - e.changedTouches[0].clientY; touch.current = null; if (d > 60) e.currentTarget.querySelector(".short-next")?.click(); }}
+      onWheel=${(e) => { if (e.deltaY > 40) e.currentTarget.querySelector('.short-next')?.click(); }}>
+    <div class="shorts-top"><b>Shorts</b><span class="spacer"></span><button class="short-close" onClick=${onClose} aria-label="Shorts schließen"><i class="bi bi-x-lg"></i></button></div>
+    <${ShortClip} key=${cur.id} item=${cur} playing=${sent.current !== cur.id} paused=${paused} onTogglePause=${() => setPaused(!paused)} onDone=${finish} onSwipe=${finish} />
+  </div>`;
+}
+
+function ShortsReveal({ s, log }) {
+  if (!s.count) return html`<section class="bb-col"><div class="glass pad"><h2>Du hast keine Shorts angesehen</h2><p class="muted">Auch eine Entscheidung! Schau auf den Beamer: Dort siehst du, wie der Feed die anderen festgehalten hat.</p></div></section>`;
+  const pct = (x) => (x == null ? '–' : `${Math.round(x * 100)} %`);
+  return html`<section class="bb-col stagger">
+    <div class="glass pad reveal-head">
+      <span class="kicker">Dein Shorts-Protokoll</span>
+      <h2>So hat der Feed dich festgehalten</h2>
+      <div class="stat-grid">
+        <div class="stat glow"><b>${fmtMin(s.totalMs)}</b><small>im Shorts-Feed</small></div>
+        <div class="stat"><b>${s.count}</b><small>Clips angesehen</small></div>
+        <div class="stat"><b>${s.ads}</b><small>Werbeclips dazwischen</small></div>
+        <div class="stat"><b>0</b><small>Likes nötig</small></div>
+      </div>
+    </div>
+    ${s.top && html`<div class="glass pad">
+      <h3>Dein Feed wurde enger</h3>
+      <p class="small">Am Anfang war <b>${pct(s.firstShare)}</b> deiner Clips aus einem Thema, am Ende <b>${pct(s.lastShare)}</b>. Dein Hauptthema laut Wiedergabezeit: <b><${Ic} k=${CAT[s.top]} /> ${CAT[s.top].name}</b> (${pct(s.topWatchShare)} deiner Zeit).</p>
+      <div class="shorts-curve">${s.curve.map((x, i) => html`<div class="sc-col" title=${`Clips ${i * 5 + 1}–${i * 5 + 5}: ${pct(x)}`}><i style=${`height:${Math.round((x || 0) * 100)}%`}></i><small>${i * 5 + 1}</small></div>`)}</div>
+      <small class="muted">Anteil des häufigsten Themas je 5 Clips</small>
+    </div>`}
+    <div class="glass pad">
+      <h3>Warum Shorts so schwer loszulassen sind</h3>
+      <ul class="problem-list">
+        <li><i class="bi bi-infinity"></i><span><b>Kein Ende:</b> Es gibt keine letzte Seite – nach jedem Clip kommt sofort der nächste.</span></li>
+        <li><i class="bi bi-play-circle"></i><span><b>Autoplay:</b> Du musst nichts entscheiden. Weiterschauen ist der Standard, Aufhören kostet Kraft.</span></li>
+        <li><i class="bi bi-stopwatch"></i><span><b>Wiedergabezeit ist das Signal:</b> Schon wie lange du hinschaust, steuert den Feed – ganz ohne Like.</span></li>
+        <li><i class="bi bi-funnel"></i><span><b>Verengung (Rabbit Hole):</b> Was dich festhält, kommt öfter – auch Themen, die dir nicht guttun.</span></li>
+        <li><i class="bi bi-badge-ad"></i><span><b>Werbung im Fluss:</b> Werbeclips sehen aus wie normale Clips und passen genau zu deinem Thema.</span></li>
+        <li><i class="bi bi-moon-stars"></i><span><b>Zeit & Schlaf:</b> Kurze Clips fühlen sich wie „nur 5 Minuten“ an – das Zeitgefühl geht verloren.</span></li>
+      </ul>
+    </div>
+    ${log?.length > 0 && html`<${TrackingInspector} log=${log} />`}
+  </section>`;
+}
+
+function Shorts({ v, act }) {
+  const [open, setOpen] = useState(false);
+  const s = v.shorts;
+  useEffect(() => { if (s.stopped) setOpen(false); }, [s.stopped]);
+  if (s.stopped && s.stats) return html`<${ShortsReveal} s=${s.stats} log=${v.trackLog} />`;
+  return html`<section class="bb-col">
+    <div class="glass pad shorts-start">
+      <i class="bi bi-phone-vibrate"></i>
+      <h2>bubbl Shorts</h2>
+      <p class="muted">Kurze Clips, die automatisch weiterlaufen. Wische nach oben, wenn dich etwas nicht interessiert. ${s.count > 0 ? html`<br />Bisher angesehen: <b>${s.count}</b> Clips.` : ''}</p>
+      <button class="btn btn-primary btn-lg w-100" onClick=${() => setOpen(true)}><i class="bi bi-play-fill"></i> ${s.count ? 'Weiter schauen' : 'Shorts starten'}</button>
+    </div>
+    ${open && html`<${ShortsPlayer} v=${v} act=${act} onClose=${() => setOpen(false)} />`}
+  </section>`;
+}
+
 // ------------------------------------------------------------------ bubbl-Postfach (simulierte E-Mails)
 const fmtTime = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const FromIcon = ({ m }) => m.fromIcon === 'ad' ? html`<span class="mail-from ad"><i class="bi bi-bag-heart"></i></span>`
@@ -607,7 +742,7 @@ function App() {
   if (status === 'needJoin') return html`<${Aurora} /><${Join} error=${error} onJoin=${(reg) => { joinRef.current = reg; sock.current?.greet(); }} />`;
   if (!v) return html`<${Aurora} /><main class="join"><${Logo} size=${46} /><div class="loader"><span class="dots"><i></i><i></i><i></i></span></div></main>`;
 
-  const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: Werkbank, fairness: Fairness, quiz: Quiz }[v.phase] || Lobby;
+  const Phase = { lobby: Lobby, feed: Feed, auswertung: Auswertung, werbung: Werbung, empfang: Empfang, profil: Profil, blase: Blase, wahl: Wahl, reflexion: Reflexion, werkbank: Werkbank, fairness: Fairness, quiz: Quiz, shorts: Shorts }[v.phase] || Lobby;
   return html`
     <${Aurora} />
     ${status === 'offline' && html`<div class="offline-banner">Verbindung unterbrochen – verbinde neu …</div>`}
@@ -623,7 +758,8 @@ function App() {
       <${TaskCard} key=${v.phase} phase=${v.phase} settings=${v.settings} />
       <${Phase} v=${v} act=${act} />
     </main>
-    <${PhaseFlash} phase=${v.phase} />`;
+    <${PhaseFlash} phase=${v.phase} />
+    ${v.pause && html`<${PauseOverlay} pz=${v.pause} act=${act} />`}`;
 }
 
 render(html`<${App} />`, document.getElementById('app'));

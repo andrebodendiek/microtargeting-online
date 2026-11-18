@@ -2,7 +2,7 @@
 import crypto from 'node:crypto';
 import {
   CATEGORIES, CAT, POSTS, POST, ROUND1, ADS, AD, PHASES, AVATARS, GROUP_LETTERS,
-  PARTY, PARTY_MESSAGES, INFERENCES, QUIZ, FAIRNESS, applyContent, DEFAULT_CONTENT,
+  PARTY, PARTY_MESSAGES, INFERENCES, QUIZ, FAIRNESS, PAUSES, PAGES, applyContent, DEFAULT_CONTENT,
 } from '../public/shared/content.js';
 import { normalizeAvatar, randomAvatar } from '../public/shared/avatar.js';
 
@@ -47,6 +47,8 @@ export function createRoom(code, content = null) {
     werkbankTest: false,
     fairRule: false,
     quiz: { idx: -1, open: false, revealed: false, startedAt: 0, answers: {} },
+    pause: null, pauseAnswers: {},
+    shortsStopped: false,
   };
 }
 export const QUIZ_SECONDS = 20;
@@ -400,6 +402,83 @@ export function mailsFor(room, p) {
 }
 const isAdMail = (m) => m.kind === 'ad' || m.kind === 'miss' || m.kind === 'recs' || m.kind === 'weekly';
 
+// ---------------------------------------------------------------- Shorts-Feed (Kurzvideos, lernt nur aus der Wiedergabezeit)
+export const SHORT_AD_EVERY = 5;
+const strHash = (t) => { let h = 2166136261; for (const ch of String(t)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+export const shortLen = (id) => 7000 + (strHash(id) % 8) * 1000; // 7–14 s je Clip
+function shortsOf(p) { return (p.shorts ||= { count: 0, totalMs: 0, watch: {}, cats: [], ads: 0, adMs: 0, swipes: 0, startedAt: 0, lastAt: 0 }); }
+// Gewichte: Je länger ein Thema angeschaut wurde, desto häufiger kommt es (quadratisch → schnelle Verengung)
+function shortWeights(s) {
+  // Wie echte Plattformen: entscheidend ist der angeschaute Anteil („Completion“), nicht nur die absolute Zeit
+  return Object.fromEntries(CAT_IDS.map((c) => [c, (1 + (s.score?.[c] || 0)) ** 1.8]));
+}
+function pickWeighted(weights, rnd) {
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = rnd() * total;
+  for (const [k, w] of Object.entries(weights)) { r -= w; if (r <= 0) return k; }
+  return Object.keys(weights)[0];
+}
+// Clip an Position idx (deterministisch aus Zustand, damit die Vorschau stabil bleibt)
+function shortAt(p, s, idx, weights) {
+  const rnd = seeded(strHash(`short:${p.id}:${idx}`)); rnd(); rnd(); // Startwerte durchmischen
+  if ((idx + 1) % SHORT_AD_EVERY === 0) {
+    const top = topCat(s.watch) || CAT_IDS[idx % CAT_IDS.length];
+    const fit = ADS.filter((a) => a.cats.includes(top));
+    const ad = (fit.length ? fit : ADS)[Math.floor(rnd() * (fit.length || ADS.length))];
+    return { id: `ad:${ad.id}:${idx}`, ad: ad.id, cat: top, ms: 9000, idx };
+  }
+  // 15 % Erkundung: gelegentlich ein zufälliges Thema, um neue Interessen zu testen
+  const cat = rnd() < 0.15 ? CAT_IDS[Math.floor(rnd() * CAT_IDS.length)] : pickWeighted(weights, rnd);
+  const pool = POSTS.filter((x) => x.cat === cat);
+  const post = pool[(Math.floor(rnd() * pool.length) + idx) % pool.length];
+  return { id: `${post.id}:${idx}`, post: post.id, cat, ms: shortLen(post.id), idx };
+}
+export function nextShorts(p, n = 3) {
+  const s = shortsOf(p); const w = shortWeights(s);
+  return Array.from({ length: n }, (_, k) => shortAt(p, s, s.count + k, w));
+}
+// Anteil des eigenen Hauptthemas in einem Fenster der Clip-Folge (Verengung)
+function topShare(cats, from, to) {
+  const part = cats.slice(from, to).filter((c) => c !== 'ad');
+  if (!part.length) return null;
+  const counts = {}; for (const c of part) counts[c] = (counts[c] || 0) + 1;
+  return Math.max(...Object.values(counts)) / part.length;
+}
+export function shortsStats(p) {
+  const s = shortsOf(p);
+  const top = topCat(s.watch);
+  const nonAd = s.cats.filter((c) => c !== 'ad');
+  return {
+    count: s.count, totalMs: s.totalMs, ads: s.ads, adMs: s.adMs, swipes: s.swipes,
+    top, topWatchShare: top ? (s.watch[top] || 0) / Math.max(1, Object.values(s.watch).reduce((a, b) => a + b, 0)) : 0,
+    firstShare: topShare(s.cats, 0, 8), lastShare: topShare(s.cats, -8), topics: new Set(nonAd.slice(-8)).size,
+    curve: Array.from({ length: Math.ceil(s.cats.length / 5) }, (_, i) => topShare(s.cats, i * 5, i * 5 + 5)),
+  };
+}
+const SHORT_BUCKETS = [120000, 240000, 360000]; // Grenzen für die Zeit-Schätzung (2/4/6 Min.)
+const timeBucket = (ms) => SHORT_BUCKETS.filter((b) => ms >= b).length;
+
+// ---------------------------------------------------------------- Innehalten (Reflexionsfragen auf alle Handys)
+const pauseKey = (phase, i) => `${phase}:${i}`;
+function pauseView(room, forPlayer) {
+  const pz = room.pause;
+  if (!pz || pz.phase !== room.phase) return null;
+  const item = PAUSES[pz.phase]?.[pz.i];
+  if (!item) return null;
+  const ans = room.pauseAnswers?.[pauseKey(pz.phase, pz.i)] || {};
+  const counts = item.options.map((_, k) => Object.values(ans).filter((a) => a === k).length);
+  const v = { phase: pz.phase, i: pz.i, q: item.q, options: item.options, revealed: !!pz.revealed, answered: Object.keys(ans).length, n: playersOf(room).length,
+    insight: pz.revealed ? item.insight : null, correct: pz.revealed && Number.isInteger(item.correct) ? item.correct : null };
+  if (!forPlayer || pz.revealed) v.counts = counts;
+  if (item.compareTime && pz.revealed) {
+    const real = item.options.map(() => 0);
+    for (const q of playersOf(room)) if (q.shorts?.count) real[timeBucket(q.shorts.totalMs)]++;
+    v.real = real;
+  }
+  if (forPlayer) { v.my = ans[forPlayer.id] ?? null; if (item.compareTime && pz.revealed) v.myReal = forPlayer.shorts?.totalMs || 0; }
+  return v;
+}
+
 // ---------------------------------------------------------------- Aktionen
 export const actions = {
   // --- SchülerInnen
@@ -418,6 +497,31 @@ export const actions = {
       if (i >= 0) p.bubble.likes.splice(i, 1);
       else { p.bubble.likes.push(postId); extendBubbleFeed(room, p, 2); }
     }
+  },
+  pauseAnswer(room, p, { value }) {
+    const pz = room.pause;
+    if (!pz || pz.phase !== room.phase || pz.revealed) return;
+    const item = PAUSES[pz.phase]?.[pz.i];
+    if (!item || !Number.isInteger(value) || value < 0 || value >= item.options.length) return;
+    ((room.pauseAnswers ||= {})[pauseKey(pz.phase, pz.i)] ||= {})[p.id] = value;
+  },
+  shortWatched(room, p, { id, ms }) {
+    if (room.phase !== 'shorts' || room.shortsStopped || typeof id !== 'string' || !Number.isFinite(ms)) return;
+    const cur = nextShorts(p, 1)[0];
+    if (cur.id !== id) return; // nur der aktuell laufende Clip zählt
+    const s = shortsOf(p);
+    const t = clamp(Math.round(ms), 0, cur.ms + 500);
+    s.startedAt ||= Date.now(); s.lastAt = Date.now();
+    s.count++; s.totalMs += t;
+    if (t < 2000) s.swipes++;
+    if (cur.ad) { s.ads++; s.adMs += t; s.cats.push('ad'); }
+    else {
+      s.watch[cur.cat] = (s.watch[cur.cat] || 0) + t; s.cats.push(cur.cat);
+      const done = t / cur.ms; // 0..1: wie viel vom Clip angeschaut wurde
+      (s.score ||= {})[cur.cat] = (s.score[cur.cat] || 0) + done * done * 3;
+    }
+    if (s.cats.length > 400) s.cats.splice(0, s.cats.length - 400);
+    logTrack(p, 'POST /shorts/watch', { clip: cur.post || cur.ad, kategorie: cur.ad ? 'werbung' : cur.cat, watch_ms: t, laenge_ms: cur.ms });
   },
   feedDone(room, p, { done }) { if (room.phase === 'feed') p.feedDone = !!done; },
   track(room, p, d) {
@@ -516,12 +620,23 @@ export const actions = {
     const list = activePhases(room);
     if (!list.find((x) => x.id === phase)) return;
     room.phase = phase;
+    room.pause = null;
     (room.phaseAt ||= {})[phase] ??= Date.now();
     const idx = list.findIndex((x) => x.id === phase);
     if (idx >= list.findIndex((x) => x.id === 'auswertung') && !room.groups) formGroups(room);
     if (phase === 'blase') for (const p of playersOf(room)) if (!p.bubble.feed.length) extendBubbleFeed(room, p, 6);
   },
   regroup(room) { formGroups(room); },
+  // Innehalten
+  pauseStart(room, _p, { i }) {
+    if (!Number.isInteger(i) || !PAUSES[room.phase]?.[i]) return;
+    room.pause = { phase: room.phase, i, revealed: false, at: Date.now() };
+    ((room.pauseAnswers ||= {})[pauseKey(room.phase, i)]) ||= {};
+  },
+  pauseReveal(room, _p, { value }) { if (room.pause) room.pause.revealed = value !== false; },
+  pauseStop(room) { room.pause = null; },
+  // Shorts
+  shortsStop(room, _p, { value }) { room.shortsStopped = value !== false; },
   setGroup(room, _p, { id, group }) {
     const p = validPid(room, id) ? room.players[id] : null;
     if (p && room.groups?.find((g) => g.id === group)) p.group = group;
@@ -570,7 +685,7 @@ export const actions = {
   },
 };
 export const TEACHER_ACTIONS = new Set(['setPhase', 'regroup', 'setGroup', 'kick', 'settings', 'replayDb', 'autoAds', 'revealVote', 'hideNote', 'resetPlayerData',
-  'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset']);
+  'werkbankTest', 'fairRule', 'quizNext', 'quizReveal', 'quizReset', 'pauseStart', 'pauseReveal', 'pauseStop', 'shortsStop']);
 
 function logTrack(p, req, body) {
   (p.trackLog ||= []).push({ t: Date.now(), req, body });
@@ -591,6 +706,7 @@ function progress(room, ps) {
     case 'profil': return { done: ps.filter((p) => Object.keys(p.inferFb).length >= 3).length, total: n, label: 'haben ihr Profil geprüft' };
     case 'blase': return { done: ps.filter((p) => p.bubble.likes.length >= 3).length, total: n, label: 'haben ≥ 3 Beiträge geliked' };
     case 'wahl': return { done: ps.filter((p) => p.vote).length, total: n, label: 'haben abgestimmt' };
+    case 'shorts': return { done: ps.filter((p) => (p.shorts?.count || 0) >= 15).length, total: n, label: 'haben ≥ 15 Shorts gesehen' };
     case 'werkbank': return { done: (room.groups || []).filter((g) => WEIGHT_KEYS.some((k) => (g.weights?.[k] ?? START_WEIGHTS[k]) !== START_WEIGHTS[k])).length, total: (room.groups || []).length, label: 'Gruppen experimentieren' };
     case 'fairness': return { done: ps.filter((p) => p.fair?.interest != null && p.fair?.fair != null).length, total: n, label: 'haben geantwortet' };
     case 'quiz': { const a = room.quiz.answers?.[room.quiz.idx] || {}; return { done: room.quiz.idx >= QUIZ.length ? n : Object.keys(a).length, total: n, label: room.quiz.idx >= 0 && room.quiz.idx < QUIZ.length ? `Antworten auf Frage ${room.quiz.idx + 1}/${QUIZ.length}` : room.quiz.idx >= QUIZ.length ? 'Quiz beendet' : 'Quiz startet gleich' }; }
@@ -687,6 +803,22 @@ export function staffView(room, { forBeamer = false } = {}) {
     v.consent = { adMails, newsletter, agbOpened, n: ps.length };
     v.tracking = { totals, catLikes, catHidden, postAttention, infYes, infNo,
       differ: players.filter((x) => x.topLikes && x.topHidden && x.topLikes !== x.topHidden).length };
+  }
+  v.pause = pauseView(room, null);
+  v.pauses = (PAUSES[room.phase] || []).map((x, i) => ({ i, q: x.q, answered: Object.keys(room.pauseAnswers?.[pauseKey(room.phase, i)] || {}).length }));
+  if (at('shorts')) {
+    const st = ps.map((p) => shortsStats(p)).filter((x) => x.count > 0);
+    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+    const maxLen = Math.max(0, ...st.map((x) => x.curve.length));
+    v.shorts = {
+      stopped: !!room.shortsStopped, people: st.length,
+      count: st.reduce((a, x) => a + x.count, 0), totalMs: st.reduce((a, x) => a + x.totalMs, 0),
+      ads: st.reduce((a, x) => a + x.ads, 0), swipes: st.reduce((a, x) => a + x.swipes, 0),
+      firstShare: avg(st.map((x) => x.firstShare).filter((x) => x != null)), lastShare: avg(st.map((x) => x.lastShare).filter((x) => x != null)),
+      curve: Array.from({ length: Math.min(maxLen, 12) }, (_, i) => avg(st.map((x) => x.curve[i]).filter((x) => x != null))),
+      tops: Object.fromEntries(CAT_IDS.map((c) => [c, st.filter((x) => x.top === c).length])),
+      maxMs: Math.max(0, ...st.map((x) => x.totalMs)),
+    };
   }
   if (at('wahl')) {
     const byCat = Object.fromEntries(CAT_IDS.map((c) => [c, { n: 0, sum: 0 }]));
@@ -794,8 +926,13 @@ export function playerView(room, p) {
       v.wahl.counts = counts;
     }
   }
+  v.pause = pauseView(room, p);
+  if (phase === 'shorts') {
+    v.shorts = { queue: nextShorts(p, 3), stopped: !!room.shortsStopped, count: shortsOf(p).count };
+    if (room.shortsStopped) v.shorts.stats = shortsStats(p);
+  }
   if (phase === 'reflexion') v.reflect = p.reflect;
-  if (phase === 'profil' || phase === 'fairness' || phase === 'werkbank') v.trackLog = (p.trackLog || []).slice(-25);
+  if (['profil', 'fairness', 'werkbank', 'shorts'].includes(phase)) v.trackLog = (p.trackLog || []).slice(-25);
   if (phase === 'werkbank' && g) {
     const w = g.weights || START_WEIGHTS;
     const members = playersOf(room).filter((q) => q.group === g.id).map((q) => ({ id: q.id, avatar: q.avatar, online: !!q.online }));
@@ -849,7 +986,7 @@ export function auskunft(room, p) {
       likes: p.likes.map((id) => POST[id]?.headline || id),
       verweildauer_ms_je_beitrag: p.track.dwell, lesezeit_ms_je_beitrag: p.track.read, geoeffnete_artikel: p.track.opens,
       interaktionen_gesamt: ts.events, gescrollt_px: p.track.scrollPx, datenpunkte_gesamt: ts.dataPoints,
-      werbebewertungen: p.ratings, empfangene_mails: mailsFor(room, p).map((m) => ({ von: m.from, betreff: m.subject, gelesen: m.read })), filterblase_likes: p.bubble.likes, wahl_sympathie: p.vote?.score ?? null,
+      werbebewertungen: p.ratings, empfangene_mails: mailsFor(room, p).map((m) => ({ von: m.from, betreff: m.subject, gelesen: m.read })), filterblase_likes: p.bubble.likes, shorts: p.shorts ? { angesehen: p.shorts.count, wiedergabezeit_s: Math.round(p.shorts.totalMs / 1000), wiedergabezeit_je_kategorie_ms: p.shorts.watch, werbeclips: p.shorts.ads } : null, wahl_sympathie: p.vote?.score ?? null,
       fairness_antworten: p.fair || {}, reflexion: p.reflect,
       protokoll_letzte_anfragen: (p.trackLog || []).slice(-20),
     },

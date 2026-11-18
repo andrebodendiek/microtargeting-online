@@ -392,6 +392,8 @@ export const PHASES = [
     task: ['Ein Angebot wurde vom Algorithmus ausgespielt – hast du es gesehen?', 'Sag ehrlich, ob es dich interessiert hätte.', 'Ist diese Auswahl fair?'] },
   { id: 'blase', title: 'Filterblase', icon: '🫧', bi: 'funnel', optional: true, mode: 'EA',
     task: ['Dein Feed passt sich jetzt an dich an.', 'Like weiter, was dich interessiert, und lade mehr Beiträge.', 'Beobachte: Wie verändert sich dein Feed?'] },
+  { id: 'shorts', title: 'Shorts-Feed', icon: '📱', bi: 'phone-vibrate', optional: true, mode: 'EA',
+    task: ['Tippe auf „Shorts starten“ und schau, so lange du willst.', 'Wische nach oben, wenn dich ein Clip nicht interessiert – oder lass ihn einfach laufen.', 'Achte darauf, was mit deinem Feed passiert.'] },
   { id: 'wahl', title: 'Wahlwerbung', icon: '🗳️', bi: 'megaphone', optional: true, mode: 'EA',
     task: ['Die „Partei für Morgen“ hat dir eine Botschaft geschickt.', 'Wie sympathisch findest du die Partei?', 'Vergleicht danach: Haben alle dieselbe Botschaft bekommen?'] },
   { id: 'reflexion', title: 'Reflexion', icon: '💭', bi: 'chat-quote', optional: false, mode: 'Plenum',
@@ -422,4 +424,47 @@ export const INFERENCES = {
   mode: ['Achtet stark auf Aussehen und Trends', 'Lässt sich von Influencer*innen beeinflussen'],
   natur: ['Verbringt die Freizeit gern draußen', 'Interessiert an Outdoor-Ausrüstung und Reisen'],
   ernaehrung: ['Achtet auf Gesundheit und Figur', 'Interessiert an Diäten und Fitness-Abos'],
+};
+
+// „Innehalten“: kurze Reflexionsfragen, die die Lehrkraft in jedem Schritt auf alle Handys schicken kann.
+// options: Antwortmöglichkeiten; insight: wird nach dem Auflösen auf Handy und Beamer gezeigt.
+export const PAUSES = {
+  feed: [
+    { q: 'Hast du gemerkt, welche Beiträge bezahlte Werbung waren?', options: ['Ja, alle', 'Einige', 'Nein, gar nicht'], insight: 'Creator-Werbung ist oft nur klein als „Bezahlte Partnerschaft“ oder #anzeige gekennzeichnet – genau deshalb wirkt sie wie ein Tipp von Freunden.' },
+    { q: 'Warum hast du Beiträge angeschaut, die du NICHT geliked hast?', options: ['Neugier', 'Die Überschrift hat mich gelockt', 'Das Bild sah spannend aus', 'Habe ich nicht'], insight: 'Auch Hinschauen ohne Like ist ein Signal. Überschriften und Bilder werden genau darauf optimiert, dass du hängen bleibst.' },
+  ],
+  auswertung: [
+    { q: 'Wäre es für dich okay, wenn bubbl deine Zeile der Datenbank an Firmen verkauft?', options: ['Ja', 'Ist mir egal', 'Nein'], insight: 'Datenhändler kaufen und verkaufen genau solche Interessenprofile – meist ohne dass die Betroffenen davon wissen.' },
+  ],
+  werbung: [
+    { q: 'Wie fühlt es sich an, andere gezielt mit Werbung anzusprechen?', options: ['Völlig normal', 'Ein bisschen komisch', 'Unangenehm'], insight: 'Ihr kanntet nur Likes. Echte Werbekunden können zusätzlich nach Alter, Ort, Uhrzeit, Gerät und Verhalten auswählen.' },
+  ],
+  empfang: [
+    { q: 'Passgenaue Werbung fühlt sich für mich eher … an', options: ['hilfreich', 'beides', 'unheimlich'], insight: 'Je besser das Targeting, desto stärker der „Die kennen mich“-Effekt – nützlich und beunruhigend zugleich.' },
+    { q: 'Hätte dich eine der Anzeigen oder Rabatt-Mails zum Kaufen verleitet?', options: ['Ja', 'Vielleicht', 'Nein'], insight: 'Personalisierte Werbung zielt auf Momente, in denen wir besonders empfänglich sind: abends, gelangweilt, mit „nur heute“-Rabattcode.' },
+  ],
+  werkbank: [
+    { q: 'Wer sollte entscheiden, welche Daten ein Werbe-Algorithmus nutzen darf?', options: ['Die Plattform', 'Der Staat / die EU', 'Die Nutzer:innen selbst', 'Niemand – alles erlaubt'], insight: 'Der Digital Services Act der EU verbietet z. B. Werbung auf Basis sensibler Daten und personalisierte Werbung an Minderjährige auf großen Plattformen.' },
+  ],
+  profil: [
+    { q: 'Was hat dich am meisten überrascht?', options: ['Dass meine Verweildauer gemessen wurde', 'Was in den AGB stand', 'Die Vermutungen über mich', 'Die Werbe-Mails', 'Nichts davon'], insight: 'Die meisten Daten entstehen nebenbei – nicht durch das, was wir aktiv eingeben.' },
+    { q: 'Würdest du jetzt etwas an deinen echten App-Einstellungen ändern?', options: ['Ja, sofort', 'Vielleicht', 'Nein'], insight: 'Tipps: personalisierte Werbung in den Einstellungen abschalten, Werbe-ID zurücksetzen, vorausgewählte Häkchen immer prüfen, Auskunft nach Art. 15 DSGVO verlangen.' },
+  ],
+  fairness: [
+    { q: 'Sollte ein Algorithmus entscheiden dürfen, wer ein Ausbildungsangebot sieht?', options: ['Ja', 'Nur mit klaren Regeln', 'Nein'], insight: 'Diskriminierung ist verboten – aber über Proxy-Merkmale passiert sie oft unbemerkt und ist schwer nachzuweisen.' },
+  ],
+  blase: [
+    { q: 'Wie oft siehst du in deinen echten Apps etwas, das NICHT zu deinen Interessen passt?', options: ['Oft', 'Manchmal', 'Fast nie'], insight: '„Fast nie“ ist kein Zufall: Empfehlungssysteme zeigen bevorzugt, was dich bisher festgehalten hat.' },
+  ],
+  shorts: [
+    { q: 'Schätze ehrlich: Wie lange warst du gerade im Shorts-Feed?', options: ['unter 2 Min.', '2–4 Min.', '4–6 Min.', 'über 6 Min.'], insight: 'Vergleicht eure Schätzung mit der echten Zeit: Im endlosen Feed verlieren die meisten das Zeitgefühl.', compareTime: true },
+    { q: 'Was hat der Algorithmus genutzt, um deinen Feed anzupassen?', options: ['Meine Likes', 'Wie lange ich geschaut habe', 'Meine Kommentare', 'Gar nichts'], correct: 1, insight: 'Die Wiedergabezeit. Du musstest nichts liken – Hinschauen und Nicht-Wegwischen reichen dem Algorithmus.' },
+    { q: 'Wolltest du schon mal „nur kurz“ Shorts schauen und bist viel länger geblieben?', options: ['Oft', 'Manchmal', 'Nie'], insight: 'Autoplay und ein endloser Feed sind so gebaut, dass es keinen natürlichen Haltepunkt gibt – das ist Absicht, kein Zufall.' },
+  ],
+  wahl: [
+    { q: 'Sollte politische Werbung personalisiert werden dürfen?', options: ['Ja', 'Nur eingeschränkt', 'Nein'], insight: 'In der EU gelten seit Oktober 2025 strenge Regeln: Politische Werbung muss gekennzeichnet sein, Targeting mit sensiblen Daten ist verboten.' },
+  ],
+  reflexion: [
+    { q: 'Wie viel Kontrolle hast du über die Werbung, die du siehst?', options: ['Viel', 'Etwas', 'Kaum', 'Gar keine'], insight: 'Ein Teil der Kontrolle liegt bei dir (Einstellungen, Einwilligungen, Bildschirmzeit) – ein Teil braucht Regeln für Plattformen.' },
+  ],
 };

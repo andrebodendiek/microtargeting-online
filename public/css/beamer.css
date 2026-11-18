@@ -321,3 +321,34 @@ body { overflow: hidden; }
 .task-panel .mode { color: var(--muted); }
 .task-panel ol li::marker { color: var(--muted); }
 .stage-card { box-shadow: none; }
+
+/* ---------- Innehalten auf dem Beamer */
+.b-pause { position: fixed; inset: 0; z-index: 50; background: rgba(16, 24, 40, 0.5); display: grid; place-items: center; padding: 3rem; animation: fade .25s; }
+.b-pause-card { width: min(70rem, 100%); background: #fff; border-radius: 1.6rem; padding: 2.4rem 2.8rem; display: flex; flex-direction: column; gap: 1.5rem; animation: rise .35s; }
+.b-pause-head { display: flex; justify-content: space-between; align-items: center; font-size: 1.15rem; }
+.b-pause-head > span:first-child { color: var(--gn-primary); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; display: inline-flex; gap: .5rem; align-items: center; }
+.b-pause-card h2 { font-size: 2.6rem; line-height: 1.2; }
+.b-pause-bars { display: flex; flex-direction: column; gap: .8rem; }
+.b-pause-row { display: grid; grid-template-columns: 18rem 1fr 3rem; gap: 1rem; align-items: center; font-size: 1.4rem; font-weight: 600; }
+.b-pause-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.b-pause-row.correct span { color: var(--ok); }
+.b-pause-row.correct span::after { content: ' ✓'; }
+.b-pause-track { position: relative; height: 2.2rem; background: var(--field); border-radius: .7rem; overflow: hidden; }
+.b-pause-track i { position: absolute; inset: 0 auto 0 0; background: var(--gn-primary); border-radius: .7rem; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.b-pause-track em { position: absolute; left: 0; bottom: 0; height: .55rem; background: #f59f00; border-radius: .3rem; transition: width .6s; }
+.b-pause-legend { display: flex; gap: 2rem; font-size: 1.05rem; color: var(--muted); }
+.b-pause-legend i { display: inline-block; width: 1.4rem; height: .7rem; border-radius: .3rem; margin-right: .4rem; vertical-align: middle; }
+.lg-est { background: var(--gn-primary); } .lg-real { background: #f59f00; }
+.b-pause-insight { margin: 0; font-size: 1.45rem; line-height: 1.4; padding: 1.1rem 1.4rem; border-radius: 1rem; background: #e7f5ff; color: #1864ab; display: flex; gap: .8rem; }
+
+/* ---------- Shorts-Bühne */
+.b-curve { flex: 1; display: flex; align-items: flex-end; gap: .8rem; min-height: 12rem; }
+.bc-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .4rem; }
+.bc-col i { display: block; width: 100%; background: var(--gn-primary); border-radius: .6rem .6rem 0 0; min-height: .3rem; transition: height .8s cubic-bezier(.2,.8,.2,1); }
+.bc-col b { font-size: 1.05rem; }
+.bc-col small { font-size: .85rem; color: var(--muted); }
+.b-problems { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.4rem; }
+.b-problems li { display: grid; grid-template-columns: auto 1fr; column-gap: .9rem; align-items: center; }
+.b-problems .bi { grid-row: span 2; font-size: 2.2rem; color: var(--gn-primary); }
+.b-problems b { font-size: 1.4rem; }
+.b-problems span { font-size: 1.1rem; color: var(--muted); }

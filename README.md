@@ -4,7 +4,7 @@ Ein Live-Unterrichtsspiel zur Frage **„Wie entsteht personalisierte Werbung?�
 
 Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna Rebmann, WBM Informatik Kohorte III): Likes mit ID verteilen → Gruppen werten aus → Gruppen „posten“ passende Werbung → Reflexion. Die digitale Fassung übernimmt alle Original-Inhalte (Headlines, Kategorien, sieben Werbeanzeigen, Auswertungstabelle, Reflexionsfragen) und erweitert sie.
 
-## Ablauf (bis zu 12 Schritte)
+## Ablauf (bis zu 13 Schritte)
 
 | # | Schritt | Form | Beamer zeigt |
 |---|---------|------|--------------|
@@ -17,9 +17,12 @@ Grundlage ist das analoge *Microtargeting-Spiel* (Unterrichtsbeispiel von Anna R
 | 7 | **Dein Datenprofil** – Tracking-Enthüllung, Radar-Profil, Vermutungen, **Tracking-Inspektor** (echte JSON-Anfragen des eigenen Handys), **DSGVO-Auskunft nach Art. 15** (Download als JSON) | EA | Likes vs. Datenpunkte |
 | 8 | **Fairness-Check** *(optional)* – ein Angebot für alle (Ausbildungsplatz) wird klick-optimiert nach einem Proxy-Merkmal ausgespielt; „Fairness-Regel“ zum Vergleich | EA | Matrix erreicht/ausgeschlossen/Streuverlust, Verteilung nach Interessengruppen, Abstimmung |
 | 9 | **Filterblase** *(optional)* | EA | Blasen-Karte |
-| 10 | **Wahlwerbung** *(optional)* | EA | widersprüchliche Versprechen |
-| 11 | **Reflexion** | Plenum | Histogramm + anonyme Notizen |
-| 12 | **Live-Quiz** *(optional)* – 20 s je Frage, Punkte für Tempo | EA | Frage, Antwortverteilung, Erklärung, Bestenliste, Siegerpodest |
+| 10 | **Shorts-Feed** *(optional)* – simulierter Kurzvideo-Feed mit Autoplay, Wischen und Werbung jeder 5. Clip; lernt nur aus der Wiedergabezeit; danach „Shorts stoppen & aufdecken“ mit persönlichem Protokoll | EA | Clips, gemeinsame Zeit, Werbeclips, Verengung des Feeds, „Die Tricks hinter Shorts“ |
+| 11 | **Wahlwerbung** *(optional)* | EA | widersprüchliche Versprechen |
+| 12 | **Reflexion** | Plenum | Histogramm + anonyme Notizen |
+| 13 | **Live-Quiz** *(optional)* – 20 s je Frage, Punkte für Tempo | EA | Frage, Antwortverteilung, Erklärung, Bestenliste, Siegerpodest |
+
+**Innehalten:** In fast jedem Schritt kann die Lehrkraft im Cockpit eine kurze Reflexionsfrage starten (z. B. „Hast du gemerkt, welche Beiträge bezahlte Werbung waren?“, „Schätze: Wie lange warst du im Shorts-Feed?“). Sie erscheint auf allen Handys und groß auf dem Beamer; die Antworten laufen live ein, „Auflösen“ zeigt Verteilung und eine Erkenntnis – beim Shorts-Feed zusätzlich Schätzung vs. tatsächlich gemessene Zeit.
 
 Fachdidaktischer Fokus: Neben der gesellschaftlichen Perspektive (Manipulation, Filterblase, Fairness) wird die technische Seite sichtbar – Datenformate (JSON), Client-Server-Kommunikation, gewichtete Bewertungsfunktionen, Bewertung von Klassifikatoren (Präzision, Recall, F1, Wahrheitsmatrix), Trainings- und Testdaten, Overfitting, Proxy-Merkmale, Rechte nach DSGVO.
 

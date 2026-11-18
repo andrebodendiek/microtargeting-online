@@ -271,17 +271,17 @@ export function Radar({ series, size = 280, labels = true }) {
 // Horizontale Balken je Kategorie (zwei Messgrößen als Anteile – gleiche Skala 0..100 %)
 export function CatBars({ a, b, aLabel, bLabel }) {
   const sa = Object.values(a).reduce((x, y) => x + y, 0) || 1;
-  const sb = Object.values(b).reduce((x, y) => x + y, 0) || 1;
-  const max = Math.max(...CATEGORIES.map((c) => Math.max(a[c.id] / sa, b[c.id] / sb)), 0.01);
+  const sb = b ? Object.values(b).reduce((x, y) => x + y, 0) || 1 : 1;
+  const max = Math.max(...CATEGORIES.map((c) => Math.max(a[c.id] / sa, b ? b[c.id] / sb : 0)), 0.01);
   return html`<div class="catbars">
-    <div class="legend"><span class="lg solid">${aLabel}</span><span class="lg hatch">${bLabel}</span></div>
+    <div class="legend"><span class="lg solid">${aLabel}</span>${b && html`<span class="lg hatch">${bLabel}</span>`}</div>
     ${CATEGORIES.map((c) => {
-      const pa = a[c.id] / sa, pb = b[c.id] / sb;
+      const pa = a[c.id] / sa, pb = b ? b[c.id] / sb : 0;
       return html`<div class="catbar-row" style=${`--c:${c.color}`}>
         <span class="catbar-name"><${Ic} k=${c} /> ${c.name}</span>
         <div class="catbar-tracks">
           <div class="catbar" title=${`${aLabel}: ${Math.round(pa * 100)} %`}><i style=${`width:${(pa / max) * 86}%`}></i><em>${Math.round(pa * 100)} %</em></div>
-          <div class="catbar hatch" title=${`${bLabel}: ${Math.round(pb * 100)} %`}><i style=${`width:${(pb / max) * 86}%`}></i><em>${Math.round(pb * 100)} %</em></div>
+          ${b && html`<div class="catbar hatch" title=${`${bLabel}: ${Math.round(pb * 100)} %`}><i style=${`width:${(pb / max) * 86}%`}></i><em>${Math.round(pb * 100)} %</em></div>`}
         </div>
       </div>`;
     })}

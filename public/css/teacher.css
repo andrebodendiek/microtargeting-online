@@ -151,3 +151,13 @@ body { background: var(--bg); }
 .cp-sus { font-size: 13.5px; color: var(--muted); }
 .cp-sus summary { cursor: pointer; font-weight: 600; }
 .cp-sus ol { margin: 6px 0 0; padding-left: 20px; }
+
+/* ---------- Innehalten */
+.cp-pause { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.cp-pause-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.cp-pause-head .bi { color: var(--gn-primary); font-size: 18px; }
+.cp-pause-head b { font-size: 15.5px; }
+.cp-pause-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--field); font-size: 14.5px; }
+.cp-pause-row.active { background: color-mix(in srgb, var(--gn-primary) 10%, #fff); box-shadow: inset 0 0 0 1.5px var(--gn-primary); }
+.cp-pause-btns { display: inline-flex; gap: 6px; }
+@media (max-width: 700px) { .cp-pause-row { grid-template-columns: 1fr; } }

@@ -181,6 +181,31 @@ export const GUIDE = {
     tipps: ['Kurz halten – die Wirkung ist nach 2–3 Minuten deutlich sichtbar.'],
     sicherung: 'Filterblase: Personalisierte Empfehlungen verstärken bestehende Interessen und blenden anderes aus.',
   },
+  shorts: {
+    dauer: '10–12 Min.', sozial: 'Einzelarbeit + Plenum',
+    ziel: 'Am eigenen Handy erleben, wie ein Kurzvideo-Feed allein aus der Wiedergabezeit lernt, sich verengt, Werbung einstreut und Zeitgefühl kostet.',
+    ablauf: [
+      'SuS tippen auf „Shorts starten“: Clips laufen automatisch weiter, Wischen nach oben überspringt, jeder 5. Clip ist Werbung (erst nach 3 s überspringbar).',
+      'Bewusst keine Zeitvorgabe nennen – „schaut einfach, so lange ihr wollt“. Nach ca. 4–6 Minuten beenden.',
+      'Innehalten 1 starten („Wie lange warst du drin?“) und schätzen lassen – noch NICHT aufdecken.',
+      '„Shorts stoppen & aufdecken“: Handys zeigen das persönliche Shorts-Protokoll, der Beamer die Tricks hinter Shorts.',
+      'Jetzt Innehalten 1 auflösen: Schätzung (Petrol) und echte Zeit (Orange) im Vergleich. Danach Innehalten 2 und 3.',
+    ],
+    impulse: [
+      'Wer hat länger geschaut als geschätzt? Woran liegt das?',
+      'Ihr habt nichts geliked – woher „wusste“ der Feed, was euch gefällt?',
+      'Habt ihr die Werbeclips als Werbung erkannt? Woran?',
+      'Welche Themen könnten in einem echten Feed gefährlich werden, wenn er sich so verengt (z. B. Schönheitsideale, Diäten, Verschwörungsmythen)?',
+      'Was hilft euch selbst: Zeitlimit, Autoplay aus, Feed bewusst „trainieren“ (Nicht interessiert), Handy weg beim Schlafen?',
+    ],
+    tipps: [
+      'Die „Clips“ sind Fotos mit Laufbalken und leichter Bewegung – es werden keine echten Videos geladen.',
+      'Der Feed lernt nur aus der Wiedergabezeit; etwa 15 % der Clips sind zufällige Themen (wie in echten Feeds zum „Ausprobieren“).',
+      '„Shorts wieder freigeben“ erlaubt eine zweite Runde – spannend, um bewusst gegenzusteuern.',
+      'Die Shorts-Anfragen erscheinen auch im Tracking-Inspektor (POST /shorts/watch).',
+    ],
+    sicherung: 'Kurzvideo-Plattformen optimieren auf Wiedergabezeit: Endlos-Feed, Autoplay und personalisierte Empfehlungen halten uns fest – Werbung wird nahtlos eingestreut. Gegenmittel: Zeitlimits, Autoplay aus, bewusstes Steuern des Feeds.',
+  },
   wahl: {
     dauer: '8 Min.', sozial: 'Einzelarbeit + Plenum',
     ziel: 'Politisches Microtargeting durchschauen: Jede Gruppe bekommt andere, teils widersprüchliche Versprechen.',
